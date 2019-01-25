@@ -580,11 +580,11 @@ store_ID = sim_ID + '_' + binning_type + '_' + sim_number
 
 #training data QoI
 #QoI = ['DM_LF', 'DN_LF', 'M_LF', 'N_LF', 'M_HF', 'N_HF', 'Jac_HF', 'Jac_LF', 't']
-#QoI = ['W_LF', 'Jac_HF', 'Jac_LF', 'EF_MOD', 'LHS_LF', 't']
+QoI = ['e_HF', 'z_HF', 'dE', 'dZ', 'e_LF', 'z_LF', 's_LF', 'tau_E', 'tau_Z', 't']
 
 #prediction data QoI
-QoI = ['e_HF', 'z_HF', 'e_LF', 'z_LF', 'e_UP', 'z_UP', 'tau_E', 'tau_Z', 'rho', 't']
-Q = len(QoI)
+#QoI = ['e_HF', 'z_HF', 'e_LF', 'z_LF', 'e_UP', 'z_UP', 'tau_E', 'tau_Z', 'rho', 't']
+#Q = len(QoI)
 
 #allocate memory
 samples = {}
