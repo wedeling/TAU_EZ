@@ -540,7 +540,6 @@ day = 24*60**2*Omega
 decay_time_nu = 5.0
 decay_time_mu = 90.0
 nu = 1.0/(day*Ncutoff**2*decay_time_nu)
-nu_LF = 1.0/(day*Ncutoff**2*decay_time_nu)
 mu = 1.0/(day*decay_time_mu)
 
 #start, end time (in days) + time step
@@ -556,15 +555,26 @@ n_steps = np.ceil((t_end-t)/dt).astype('int')
 # USER KEYS #
 #############
 
-sim_ID = 'tau_EZ'
-store_frame_rate = np.floor(0.05*day/dt).astype('int')
+sim_ID = 'tau_EZ_nu_LF'
+#store_frame_rate = np.floor(0.05*day/dt).astype('int')
+store_frame_rate = 1
 plot_frame_rate = np.floor(1.0*day/dt).astype('int')
 S = np.floor(n_steps/store_frame_rate).astype('int')
 
+if sim_ID == 'tau_EZ':
+    nu_LF = 1.0/(day*Ncutoff**2*decay_time_nu)
+elif sim_ID == 'tau_EZ_nu_LF':
+    nu_LF = 1.0/(day*Ncutoff_LF**2*decay_time_nu)
+else:
+    print '****************'
+    print 'nu_LF not set'
+    print '****************'
+    import sys; sys.exit()
+
 state_store = True
 restart = True
-store = False
-plot = True
+store = True
+plot = False
 smooth = False
 eddy_forcing_type = 'test'
 binning_type = 'exact'
@@ -580,11 +590,11 @@ store_ID = sim_ID + '_' + binning_type + '_' + sim_number
 
 #training data QoI
 #QoI = ['DM_LF', 'DN_LF', 'M_LF', 'N_LF', 'M_HF', 'N_HF', 'Jac_HF', 'Jac_LF', 't']
-QoI = ['e_HF', 'z_HF', 'dE', 'dZ', 'e_LF', 'z_LF', 's_LF', 'tau_E', 'tau_Z', 't']
+QoI = ['e_HF', 'z_HF', 's_HF', 'dE', 'dZ', 'e_LF', 'z_LF', 's_LF', 'tau_E', 'tau_Z', 't']
 
 #prediction data QoI
 #QoI = ['e_HF', 'z_HF', 'e_LF', 'z_LF', 'e_UP', 'z_UP', 'tau_E', 'tau_Z', 'rho', 't']
-#Q = len(QoI)
+Q = len(QoI)
 
 #allocate memory
 samples = {}
@@ -906,39 +916,52 @@ for n in range(n_steps):
     if j2 == store_frame_rate and store == True:
         j2 = 0
         
-        print 'n = ', n, ' of ', n_steps
+        if np.mod(n, np.round(day/dt)) == 0:
+            print 'n = ', n, ' of ', n_steps
 
         #################
         # training data #
         #################
-        #samples['EF_MOD'][idx, :, :] = EF_hat_n_mod 
-        #samples['Jac_LF'][idx, :, :] = VgradW_hat_nm1_LF 
-        #samples['Jac_HF'][idx, :, :] = VgradW_hat_nm1_HF
-        #samples['W_LF'][idx, :, :] = w_hat_nm1_LF
-        #samples['LHS_LF'][idx, :, :] = lhs_hat_n_LF
 
+        E_LF, Z_LF, S_LF = get_EZS(w_hat_np1_LF)
+        E_HF, Z_HF, S_HF = get_EZS(w_hat_np1_HF)
+        
+        dE = (E_HF - E_LF)/E_LF
+        dZ = (Z_HF - Z_LF)/Z_LF
+
+        samples['e_HF'][idx] = E_HF
+        samples['z_HF'][idx] = Z_HF
+        samples['s_HF'][idx] = S_HF
+        samples['e_LF'][idx] = E_LF
+        samples['z_LF'][idx] = Z_LF
+        samples['s_LF'][idx] = S_LF
+        samples['dE'][idx] = dE
+        samples['dZ'][idx] = dZ
+        samples['tau_E'][idx] = tau_E
+        samples['tau_Z'][idx] = tau_Z
+        
         ###################
         # prediction data #
         ###################
         
-        E_HF, Z_HF = compute_E_and_Z(w_hat_np1_HF)
-        E_LF, Z_LF = compute_E_and_Z(w_hat_np1_LF)
-        E_UP, Z_UP = compute_E_and_Z(w_hat_np1_UP)
+        #E_HF, Z_HF = compute_E_and_Z(w_hat_np1_HF)
+        #E_LF, Z_LF = compute_E_and_Z(w_hat_np1_LF)
+        #E_UP, Z_UP = compute_E_and_Z(w_hat_np1_UP)
        
-        samples['e_HF'][idx] = E_HF
-        samples['z_HF'][idx] = Z_HF
-        samples['e_LF'][idx] = E_LF
-        samples['z_LF'][idx] = Z_LF
-        samples['e_UP'][idx] = E_UP
-        samples['z_UP'][idx] = Z_UP
-        samples['tau_E'][idx] = tau_E
-        samples['tau_Z'][idx] = tau_Z
-        #EF_nm1 = np.fft.irfft2(EF_hat_nm1)
-        #EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
-        
-        psi_n_LF = np.fft.irfft2(get_psi_hat(w_hat_n_LF))
-        dPsi_n = np.fft.irfft2(get_psi_hat(w_hat_n_HF - w_hat_n_LF))
-        samples['rho'][idx] = spatial_corr_coef(dPsi_n, psi_n_LF)
+        #samples['e_HF'][idx] = E_HF
+        #samples['z_HF'][idx] = Z_HF
+        #samples['e_LF'][idx] = E_LF
+        #samples['z_LF'][idx] = Z_LF
+        #samples['e_UP'][idx] = E_UP
+        #samples['z_UP'][idx] = Z_UP
+        #samples['tau_E'][idx] = tau_E
+        #samples['tau_Z'][idx] = tau_Z
+        ##EF_nm1 = np.fft.irfft2(EF_hat_nm1)
+        ##EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
+        #
+        #psi_n_LF = np.fft.irfft2(get_psi_hat(w_hat_n_LF))
+        #dPsi_n = np.fft.irfft2(get_psi_hat(w_hat_n_HF - w_hat_n_LF))
+        #samples['rho'][idx] = spatial_corr_coef(dPsi_n, psi_n_LF)
 
         samples['t'][idx] = t
         
