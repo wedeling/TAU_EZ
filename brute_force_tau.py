@@ -973,7 +973,7 @@ for n in range(n_steps):
 
         #samples['t'][idx] = t
         #
-        #idx += 1  
+        idx += 1  
         
     #update variables
     w_hat_nm1_HF = np.copy(w_hat_n_HF)
