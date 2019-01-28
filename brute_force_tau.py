@@ -971,8 +971,8 @@ for n in range(n_steps):
         #dPsi_n = np.fft.irfft2(get_psi_hat(w_hat_n_HF - w_hat_n_LF))
         #samples['rho'][idx] = spatial_corr_coef(dPsi_n, psi_n_LF)
 
-        #samples['t'][idx] = t
-        #
+        samples['t'][idx] = t
+        
         idx += 1  
         
     #update variables
