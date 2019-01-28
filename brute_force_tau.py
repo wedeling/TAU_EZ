@@ -560,6 +560,7 @@ sim_ID = 'tau_EZ_nu_LF_PE_HF'
 store_frame_rate = 1
 plot_frame_rate = np.floor(1.0*day/dt).astype('int')
 S = np.floor(n_steps/store_frame_rate).astype('int')
+
 tau_E_max = 1.0
 tau_Z_max = 1.0
 
@@ -887,7 +888,11 @@ for n in range(n_steps):
     
     #unparametrized solve
     w_hat_np1_UP, VgradW_hat_n_UP = get_w_hat_np1(w_hat_n_UP, w_hat_nm1_UP, VgradW_hat_nm1_UP, P_LF, norm_factor_LF)
-    
+
+    t += dt
+    j += 1
+    j2 += 1
+
     if j == plot_frame_rate and plot == True:
         j = 0
 
@@ -987,10 +992,6 @@ for n in range(n_steps):
     w_hat_nm1_UP = np.copy(w_hat_n_UP)
     w_hat_n_UP = np.copy(w_hat_np1_UP)
     VgradW_hat_nm1_UP = np.copy(VgradW_hat_n_UP)
-
-    t += dt
-    j += 1
-    j2 += 1
 
 #store the state of the system to allow for a simulation restart at t > 0
 if state_store == True:
