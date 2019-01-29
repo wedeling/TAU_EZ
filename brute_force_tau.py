@@ -555,7 +555,7 @@ n_steps = np.ceil((t_end-t)/dt).astype('int')
 # USER KEYS #
 #############
 
-sim_ID = 'tau_EZ_nu_LF_PE_HF'
+sim_ID = 'tau_EZ_PE_HF'
 #store_frame_rate = np.floor(0.05*day/dt).astype('int')
 store_frame_rate = 1
 plot_frame_rate = np.floor(1.0*day/dt).astype('int')
@@ -569,8 +569,8 @@ restart = True
 store = True
 plot = False
 smooth = False
-eddy_forcing_type = 'tau_ortho'
-binning_type = 'exact'
+eddy_forcing_type = 'binned'
+binning_type = 'global'
 
 if sim_ID == 'tau_EZ' or sim_ID == 'tau_EZ_PE_HF':
     print 'Using HF nu_LF'
@@ -628,9 +628,9 @@ if restart == True:
         vars()[key] = state[key]
 
     #initialize the unparameterized solution from the LF model
-    w_hat_n_UP = np.copy(w_hat_n_LF)
-    w_hat_nm1_UP = np.copy(w_hat_nm1_LF)
-    VgradW_hat_nm1_UP = np.copy(VgradW_hat_nm1_LF)
+    #w_hat_n_UP = np.copy(w_hat_n_LF)
+    #w_hat_nm1_UP = np.copy(w_hat_nm1_LF)
+    #VgradW_hat_nm1_UP = np.copy(VgradW_hat_nm1_LF)
         
 else:
     
@@ -664,7 +664,7 @@ else:
 
 if eddy_forcing_type == 'binned':
     
-    fname = HOME + '/samples/' + sim_ID + '_t_' + str(np.around(t_data/day, 1)) + '.hdf5'
+    fname = HOME + '/samples/' + sim_ID + '_exact_training_t_' + str(np.around(t_data/day, 1)) + '.hdf5'
 
     print 'Loading', fname
 
@@ -674,7 +674,7 @@ if eddy_forcing_type == 'binned':
 
     #########################
     N_c = int(sys.argv[2]) 
-   
+
     S_train = h5f['t'].size
     S_extrapolate = 0 
 
@@ -705,37 +705,21 @@ if eddy_forcing_type == 'binned':
     print 'Lags =', lag
     print '***********************'
 
-    c_i = np.zeros([N**2, S_train - max_lag - S_extrapolate, N_c])
-    r = np.zeros([N**2, S_train - max_lag - S_extrapolate])
+    c_i = np.zeros([S_train - max_lag - S_extrapolate, N_c])
+    r = np.zeros([S_train - max_lag - S_extrapolate])
 
     for s in range(max_lag, S_train - S_extrapolate):
         
         for i in range(N_c):
             
             if covariates[i] == 'auto':
-                c_i_hat = P_LF*h5f['Jac_HF'][s-lags[i],:,:] - h5f['Jac_LF'][s-lags[i],:,:]
-                #c_i_hat = h5f['EF'][s-lags[i],:,:] 
-            elif covariates[i] == 'eddy_visc':
-                c_i_hat = k_squared*h5f['W_LF'][s-lags[i],:,:]
-            elif covariates[i] == 'grad_w':
-                c_i_hat = (kx + ky)*h5f['W_LF'][s-lags[i],:,:]
-            elif covariates[i] == 'psi':
-                c_i_hat = h5f['W_LF'][s-lags[i],:,:]/k_squared_no_zero
-                c_i_hat[0,0] = 0.0
+                c_i[idx, i] = h5f['dE'][s-lags[i]]
             else:
-                c_i_hat = h5f[covariates[i]][s-lags[i],:,:]
-    
-            c_i[:, idx, i] = np.fft.irfft2(c_i_hat).flatten()
+                c_i[idx, i] = h5f[covariates[i]][s-lags[i]]
 
-        r_hat = P_LF*h5f['Jac_HF'][s,:,:] - h5f['Jac_LF'][s,:,:]
-        #r_hat = h5f['EF'][s,:,:]
-        r[:, idx] = np.fft.irfft2(r_hat).flatten()
+        r[idx] = h5f['dE'][s] 
         
         idx += 1
-   
-    c = np.zeros([N**2*(S_train - max_lag - S_extrapolate), N_c])
-    for i in range(N_c):
-        c[:, i] = c_i[:,:,i].flatten()
     
     #########################
     
@@ -744,11 +728,11 @@ if eddy_forcing_type == 'binned':
     print 'Creating Binning object...'
     if binning_type == 'global':
         from binning import *
-        delta_bin = Binning(c, r.flatten(), N, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
-#        if N_c == 1:
-#            delta_bin.compute_surrogate_jump_probabilities(plot=False)
-#            delta_bin.compute_jump_probabilities()
-#            delta_bin.plot_jump_pmfs()
+        delta_bin = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
+        if N_c == 1:
+            delta_bin.compute_surrogate_jump_probabilities(plot = True)
+            delta_bin.compute_jump_probabilities()
+            delta_bin.plot_jump_pmfs()
     else:
         from local_binning import *
         delta_bin = Local_Binning(c, r.flatten(), N, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
@@ -756,6 +740,7 @@ if eddy_forcing_type == 'binned':
 
     delta_bin.print_bin_info()
 
+"""
 #smoothing parameters
 tau1 = 1.0; tau2 = 1.0; nu1 = 1.0
 
@@ -1013,5 +998,5 @@ if state_store == True:
 #store the samples
 if store == True:
     store_samples_hdf5() 
-
+"""
 plt.show()
