@@ -167,32 +167,13 @@ def draw_w():
     plt.tight_layout()
 
 def draw_2w():
-    plt.subplot(121, aspect = 'equal', title=r'$Q_1\;, ' + r't = '+ str(np.around(t/day, 2)) + '\;[days]$')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.contourf(x, y, psi_n_LF, 100)
-    #plt.contourf(x, y, EF_np1_smooth, 100)
-    plt.colorbar()
-    #plt.colorbar()
-    plt.subplot(122, aspect='equal', title=r'$Q_2$')
-    #plt.contourf(x, y, EF_MOD, 100)
-    plt.contourf(x, y, psi_n_prime,  100)
-    #plt.plot(beta1_mean*EF_n_mod, 'ro')
-    #plt.plot(EF_nm1_exact, 'bs', alpha=0.01)
-    #plt.plot(r.reshape([N, N])[:,100], 'b', label=r'EF')
-    #plt.plot(EF_np1_smooth[:,100], 'r', label=r'EF_smooth')
+    plt.subplot(121, xlabel=r'$t\;[days]$')
+    plt.plot(T, Tau_E, label=r'$\tau_E$')
+    plt.plot(T, R, label=r'$\widetilde{\tau}_E$')
     plt.legend(loc=0)
-    plt.colorbar()
-    plt.xlabel('x')
-    plt.ylabel('y')
-    
-    #plt.subplot(122, title=r'$Q_2$')
-
-    #least squares estimate for beta1 only (beta0 = 0 a priori)
-    #beta1 = np.sum(EF_nm1_exact*EF_n_mod)/np.sum(EF_n_mod*EF_n_mod)
-    #print beta1
-    # plt.contourf(x, y, beta1*EF_n_mod, 100)
-    #plt.colorbar()
+    plt.subplot(122)
+    plt.hist([Tau_E, R], 20, label=[r'$\tau_E$', r'$\widetilde{\tau}_E$'])
+    plt.legend(loc='upper right')
     plt.tight_layout()
 
 def draw_stats():
@@ -558,7 +539,7 @@ n_steps = np.ceil((t_end-t)/dt).astype('int')
 sim_ID = 'tau_EZ_PE_HF'
 #store_frame_rate = np.floor(0.05*day/dt).astype('int')
 store_frame_rate = 1
-plot_frame_rate = np.floor(1.0*day/dt).astype('int')
+plot_frame_rate = np.floor(0.25*day/dt).astype('int')
 S = np.floor(n_steps/store_frame_rate).astype('int')
 
 tau_E_max = 1.0
@@ -566,8 +547,8 @@ tau_Z_max = 1.0
 
 state_store = False 
 restart = True
-store = True
-plot = False
+store = False
+plot = True
 smooth = False
 eddy_forcing_type = 'binned'
 binning_type = 'global'
@@ -713,26 +694,26 @@ if eddy_forcing_type == 'binned':
         for i in range(N_c):
             
             if covariates[i] == 'auto':
-                c_i[idx, i] = h5f['dE'][s-lags[i]]
+                c_i[idx, i] = h5f['tau_E'][s-lags[i]]
             else:
                 c_i[idx, i] = h5f[covariates[i]][s-lags[i]]
 
-        r[idx] = h5f['dE'][s] 
+        r[idx] = h5f['tau_E'][s] 
         
         idx += 1
     
     #########################
     
-    N_bins = 10
+    N_bins = 40
     
     print 'Creating Binning object...'
     if binning_type == 'global':
         from binning import *
         delta_bin = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
-        if N_c == 1:
-            delta_bin.compute_surrogate_jump_probabilities(plot = True)
-            delta_bin.compute_jump_probabilities()
-            delta_bin.plot_jump_pmfs()
+        #if N_c == 1:
+        #    delta_bin.compute_surrogate_jump_probabilities(plot = True)
+        #    delta_bin.compute_jump_probabilities()
+        #    delta_bin.plot_jump_pmfs()
     else:
         from local_binning import *
         delta_bin = Local_Binning(c, r.flatten(), N, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
@@ -740,7 +721,6 @@ if eddy_forcing_type == 'binned':
 
     delta_bin.print_bin_info()
 
-"""
 #smoothing parameters
 tau1 = 1.0; tau2 = 1.0; nu1 = 1.0
 
@@ -750,7 +730,7 @@ norm_factor_LF = 1.0/(3.0/(2.0*dt) - nu_LF*k_squared + mu)
 norm_factor_smooth = 1.0/(3.0/(2.0*dt) + tau2 - nu1*k_squared)
 
 j = 0; j2 = 0;  idx = 0;
-T  = []; 
+T  = []; R = []; Tau_E = [] 
 energy_HF = []; energy_LF = []; energy_UP = []
 enstrophy_HF = []; enstrophy_LF = []; enstrophy_UP = []
 
@@ -764,35 +744,19 @@ for n in range(n_steps):
         
     #exact eddy forcing
     EF_hat_nm1_exact = P_LF*VgradW_hat_nm1_HF - VgradW_hat_nm1_LF 
+    
+    #orthogonal patterns
+    psi_hat_n_prime = get_psi_hat_prime(w_hat_n_LF)
+    w_hat_n_prime = get_w_hat_prime(w_hat_n_LF)
 
-    #LHS of the LF model (Euler)
-    lhs_hat_n_LF = (w_hat_n_LF - w_hat_nm1_LF)/dt + VgradW_hat_nm1_LF
-
-    #residual of the LF model (Euler)
-    res_hat_n_LF = (w_hat_n_LF - w_hat_nm1_LF)/dt + VgradW_hat_nm1_LF - nu*k_squared*w_hat_nm1_LF - mu*(P_LF*F_hat - w_hat_nm1_LF)
+    #exact tau_E and tau_Z
+    tau_E, tau_Z = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
+    
+    #E & Z tracking eddy forcing
+    EF_hat_n_ortho_exact = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
 
     #covariates
-    #EF_hat_n_mod = (kx**2 + ky**2)*lhs_hat_n_LF
-    #EF_MOD = np.fft.irfft2(EF_hat_n_mod)
-    #EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
-    #beta1 = np.sum(EF_nm1_exact*EF_MOD)/np.sum(EF_MOD**2)
-    #Jac_LF = np.fft.irfft2(VgradW_hat_nm1_LF)
-    #W_LF = np.fft.irfft2(w_hat_nm1_LF)
-    #LHS_LF = np.fft.irfft2(lhs_hat_n_LF)
-    #res_n_LF = np.fft.irfft2(res_hat_n_LF)
-    #eddy_visc = np.fft.irfft2(k_squared*w_hat_nm1_LF)
-    #grad_w = np.fft.irfft2((kx + ky)*w_hat_nm1_LF)
-    #psi_hat = w_hat_nm1_LF/k_squared_no_zero
-    #psi_hat[0, 0] = 0.0
-    #psi = np.fft.irfft2(psi_hat)
 
-    #energy correction tau
-    #tau_E = get_exact_tau4(w_hat_n_LF, w_hat_n_HF)
-    #tau_E = get_data_driven_tau(w_hat_n_LF, w_hat_n_HF, P, 1.0)
-    #tau_Z = get_data_driven_tau_Z(w_hat_n_LF, w_hat_n_HF, P, 1.0)
-    tau_E, tau_Z = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
-    #tau_E = get_exact_tau_Zanna(w_hat_n_LF, lhs_hat_n_LF, w_hat_n_HF)
-    #tau_E = get_exact_tau_full(w_hat_n_LF, w_hat_nm1_LF, w_hat_n_HF, w_hat_nm1_HF)
 
     #SURROGATE eddy forcing
     if eddy_forcing_type == 'binned':
@@ -803,44 +767,36 @@ for n in range(n_steps):
                 j3 = 0
 
                 c_i = delta_bin.get_covar(lags*store_frame_rate)
-                r = delta_bin.get_r_ip1(c_i) 
+                r = delta_bin.get_r_ip1(c_i)[0] 
         else:
-            r = np.fft.irfft2(EF_hat_nm1_exact)
+            r = tau_E 
 
-        covar = np.zeros([N**2, N_c])
+        #covar = np.zeros([N**2, N_c])
+        covar = np.zeros([1, N_c])
         
         for i in range(N_c):
             if covariates[i] == 'auto':
                 covar[:, i] = r.flatten()
-                #covar[:, i] = res_n_LF.flatten()
             else:
                 covar[:, i] = vars()[covariates[i]].flatten()
         
         delta_bin.append_covar(covar)
 
-        EF_hat_nm1 = P_LF*np.fft.rfft2(r)
+        #EF_hat = P_LF*np.fft.rfft2(r)
+        EF_hat = EF_hat_n_ortho_exact
         j3 += 1
 
-    elif eddy_forcing_type == 'model':
-        beta1 = np.sum(EF_nm1_exact*EF_n_mod)/np.sum(EF_n_mod**2)
-        EF_hat_nm1 = beta1*EF_hat_n_mod
-    elif eddy_forcing_type == 'relax':
-        EF_hat_nm1 = tau*(P_LF*w_hat_nm1_HF - w_hat_nm1_LF)
     elif eddy_forcing_type == 'tau':
-        EF_hat_nm1 = -tau_Z*w_hat_n_LF
+        EF_hat = -tau_Z*w_hat_n_LF
     elif eddy_forcing_type == 'tau_eddy_visc':
-        EF_hat_nm1 = -tau_E*(kx**2 + ky**2)*w_hat_n_LF
-    elif eddy_forcing_type == 'tau_Zanna':
-        EF_hat_nm1 = -tau_E*(kx**2 + ky**2)*lhs_hat_n_LF
+        EF_hat = -tau_E*(kx**2 + ky**2)*w_hat_n_LF
     elif eddy_forcing_type == 'tau_ortho':
-        psi_hat_n_prime = get_psi_hat_prime(w_hat_n_LF)
-        w_hat_n_prime = get_w_hat_prime(w_hat_n_LF)
-        EF_hat_nm1 = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime
+        EF_hat = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime
         #EF_hat_nm1 = -tau_Z*w_hat_n_LF - tau_E*w_hat_n_LF
     elif eddy_forcing_type == 'unparam':
-        EF_hat_nm1 = np.zeros([N, N/2+1])
+        EF_hat = np.zeros([N, N/2+1])
     elif eddy_forcing_type == 'exact':
-        EF_hat_nm1 = EF_hat_nm1_exact
+        EF_hat = EF_hat_nm1_exact
     else:
         print 'No valid eddy_forcing_type selected'
         import sys; sys.exit()
@@ -849,17 +805,17 @@ for n in range(n_steps):
     if smooth == True:
 
         if n < max_lag*store_frame_rate:
-            EF_hat_n_smooth = EF_hat_nm1
-            EF_hat_nm1_smooth = EF_hat_nm1
+            EF_hat_n_smooth = EF_hat
+            EF_hat_nm1_smooth = EF_hat
             VgradEF_hat_n_smooth = compute_VgradEF_hat(w_hat_n_LF, EF_hat_n_smooth)
             VgradEF_hat_nm1_smooth = VgradEF_hat_n_smooth
         else:
             VgradEF_hat_n_smooth = compute_VgradEF_hat(w_hat_n_LF, EF_hat_n_smooth)
 
             EF_hat_np1_smooth = norm_factor_smooth*(2.0/dt*EF_hat_n_smooth - 1.0/(2.0*dt)*EF_hat_nm1_smooth \
-                                -2.0*VgradEF_hat_n_smooth + VgradEF_hat_nm1_smooth + tau1*EF_hat_nm1)
+                                -2.0*VgradEF_hat_n_smooth + VgradEF_hat_nm1_smooth + tau1*EF_hat)
 
-            EF_hat_nm1 = EF_hat_np1_smooth
+            EF_hat = EF_hat_np1_smooth
             
             #update variables
             EF_hat_nm1_smooth = np.copy(EF_hat_n_smooth)
@@ -869,7 +825,7 @@ for n in range(n_steps):
     #########################
 
     #LF solve
-    w_hat_np1_LF, VgradW_hat_n_LF = get_w_hat_np1(w_hat_n_LF, w_hat_nm1_LF, VgradW_hat_nm1_LF, P_LF, norm_factor_LF, EF_hat_nm1)
+    w_hat_np1_LF, VgradW_hat_n_LF = get_w_hat_np1(w_hat_n_LF, w_hat_nm1_LF, VgradW_hat_nm1_LF, P_LF, norm_factor_LF, EF_hat)
     
     #unparametrized solve
     w_hat_np1_UP, VgradW_hat_n_UP = get_w_hat_np1(w_hat_n_UP, w_hat_nm1_UP, VgradW_hat_nm1_UP, P_LF, norm_factor_LF)
@@ -885,9 +841,11 @@ for n in range(n_steps):
         w_np1_LF = np.fft.irfft2(w_hat_np1_LF)
 
         T.append(t/day)
-        
+        R.append(r)
+        Tau_E.append(tau_E)
+
         EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
-        EF_nm1 = np.fft.irfft2(EF_hat_nm1)
+        EF = np.fft.irfft2(EF_hat)
         if smooth == True:
             EF_np1_smooth = np.fft.irfft2(EF_hat_np1_smooth)
 
@@ -905,8 +863,8 @@ for n in range(n_steps):
         energy_LF.append(E_LF); enstrophy_LF.append(Z_LF)
         energy_UP.append(E_UP); enstrophy_UP.append(Z_UP)
 
-        drawnow(draw_stats)
-        #drawnow(draw_3w)
+        #drawnow(draw_stats)
+        drawnow(draw_2w)
         
     #store samples to dict
     if j2 == store_frame_rate and store == True:
@@ -998,5 +956,5 @@ if state_store == True:
 #store the samples
 if store == True:
     store_samples_hdf5() 
-"""
+
 plt.show()

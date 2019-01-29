@@ -241,7 +241,7 @@ class Binning:
     def get_covar(self, lags):
         
         c_i = np.zeros([self.N**2, self.N_c])
-        
+
         for i in range(self.N_c):
             
             if lags[i] <= self.max_lag:
