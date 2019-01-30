@@ -757,7 +757,7 @@ for n in range(n_steps):
     EF_hat_n_ortho_exact = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
 
     #covariates
-
+    e_LF, z_LF, s_LF = get_EZS(w_hat_n_LF)
 
     #SURROGATE eddy forcing
     if eddy_forcing_type == 'binned':
