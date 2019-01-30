@@ -106,7 +106,6 @@ class Binning:
         #self.rmax, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='max', bins=bins)
         #self.rmin, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='min', bins=bins)
         #self.compute_c_samples_per_bin()
-        #self.compute_cstd_per_bin()
 
     #check which c_i fall within empty bins and correct binnumbers_i by
     #projecting to the nearest non-empty bin
@@ -448,29 +447,6 @@ class Binning:
             
         self.c_per_bin = np.array(c_per_bin)
         
-    def compute_cstd_per_bin(self):
-        cstd_per_bin = []
-        
-        for b in range(np.max(self.unique_binnumbers)+1):
-            cstd_per_bin.append(np.std(self.c_per_bin[b]))
-            
-        self.cstd_per_bin = np.array(cstd_per_bin)
-        
-    def perturb_c(self, c_i):
-        
-        #find in which bins the c_i samples fall
-        _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
-        
-        #corrects binnumbers_i if outliers are found
-        self.check_outliers(binnumbers_i, c_i)
-        
-        for i in range(self.N_c):
-            cstd = self.cstd_per_bin[binnumbers_i]
-            rnd = np.random.randn(self.N**2, 1).reshape(self.N**2)
-            c_i[:, i] += rnd*cstd*2.0
-            
-        return c_i
-
     #same as idx_per_bin only stored as a dict instead of 1d array
     def compute_binnumber_per_bin(self):
 

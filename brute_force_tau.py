@@ -525,7 +525,7 @@ mu = 1.0/(day*decay_time_mu)
 
 #start, end time (in days) + time step
 t = 250.0*day
-t_end = t + 8.0*365*day
+#t_end = t + 8.0*365*day
 t_end = 500.0*day
 t_data = 500.0*day
 
@@ -548,6 +548,7 @@ tau_Z_max = 1.0
 state_store = False 
 restart = True
 store = False
+store_fig = True
 plot = True
 smooth = False
 eddy_forcing_type = 'binned'
@@ -710,10 +711,10 @@ if eddy_forcing_type == 'binned':
     if binning_type == 'global':
         from binning import *
         delta_bin = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
-        #if N_c == 1:
-        #    delta_bin.compute_surrogate_jump_probabilities(plot = True)
-        #    delta_bin.compute_jump_probabilities()
-        #    delta_bin.plot_jump_pmfs()
+        if N_c == 1:
+            delta_bin.compute_surrogate_jump_probabilities(plot = False)
+            delta_bin.compute_jump_probabilities()
+            delta_bin.plot_jump_pmfs()
     else:
         from local_binning import *
         delta_bin = Local_Binning(c, r.flatten(), N, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
@@ -767,7 +768,8 @@ for n in range(n_steps):
                 j3 = 0
 
                 c_i = delta_bin.get_covar(lags*store_frame_rate)
-                r = delta_bin.get_r_ip1(c_i)[0] 
+                #r = delta_bin.get_r_ip1(c_i)[0] 
+                r = delta_bin.get_sub_mean_r_ip1(c_i)[0] 
         else:
             r = tau_E 
 
@@ -841,8 +843,9 @@ for n in range(n_steps):
         w_np1_LF = np.fft.irfft2(w_hat_np1_LF)
 
         T.append(t/day)
-        R.append(r)
-        Tau_E.append(tau_E)
+        if eddy_forcing_type == 'binned':
+            R.append(r)
+            Tau_E.append(tau_E)
 
         EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
         EF = np.fft.irfft2(EF_hat)
@@ -956,5 +959,16 @@ if state_store == True:
 #store the samples
 if store == True:
     store_samples_hdf5() 
+
+#store the drawnow figue to file in order to load at a later and and tweak it
+if store_fig == True and plot == True:
+    ax = plt.gca()
+
+    if os.path.exists(HOME + '/figures') == False:
+        os.makedirs(HOME + '/figures')
+    
+    #generate random filename
+    import uuid
+    cPickle.dump(ax, open(HOME + '/figures/fig_' + str(uuid.uuid1())[0:8] + '.pickle', 'w'))
 
 plt.show()
