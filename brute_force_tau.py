@@ -168,11 +168,11 @@ def draw_w():
 
 def draw_2w():
     plt.subplot(121, xlabel=r'$t\;[days]$')
-    plt.plot(T, Tau_E, label=r'$\tau_E$')
-    plt.plot(T, R, label=r'$\widetilde{\tau}_E$')
+    plt.plot(T, DE, label=r'$\Delta_E$')
+    plt.plot(T, R, label=r'$\widetilde{\Delta}_E$')
     plt.legend(loc=0)
     plt.subplot(122)
-    plt.hist([Tau_E, R], 20, label=[r'$\tau_E$', r'$\widetilde{\tau}_E$'])
+    plt.hist([DE, R], 20, label=[r'$\Delta_E$', r'$\widetilde{\Delta}_E$'])
     plt.legend(loc='upper right')
     plt.tight_layout()
 
@@ -251,7 +251,7 @@ def get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P, tau_max_E, tau_max_Z):
     tau_E = tau_max_E*np.tanh(dE)*np.sign(src_E)
     tau_Z = tau_max_Z*np.tanh(dZ)*np.sign(src_Z)
     
-    return tau_E, tau_Z
+    return tau_E, tau_Z, dE, dZ
 
 def get_EZS(w_hat_n):
 
@@ -695,11 +695,11 @@ if eddy_forcing_type == 'binned':
         for i in range(N_c):
             
             if covariates[i] == 'auto':
-                c_i[idx, i] = h5f['tau_E'][s-lags[i]]
+                c_i[idx, i] = h5f['dE'][s-lags[i]]
             else:
                 c_i[idx, i] = h5f[covariates[i]][s-lags[i]]
 
-        r[idx] = h5f['tau_E'][s] 
+        r[idx] = h5f['dE'][s] 
         
         idx += 1
     
@@ -711,10 +711,10 @@ if eddy_forcing_type == 'binned':
     if binning_type == 'global':
         from binning import *
         delta_bin = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
-        if N_c == 1:
-            delta_bin.compute_surrogate_jump_probabilities(plot = False)
-            delta_bin.compute_jump_probabilities()
-            delta_bin.plot_jump_pmfs()
+        #if N_c == 1:
+        #    delta_bin.compute_surrogate_jump_probabilities(plot = True)
+        #    delta_bin.compute_jump_probabilities()
+        #    delta_bin.plot_jump_pmfs()
     else:
         from local_binning import *
         delta_bin = Local_Binning(c, r.flatten(), N, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
@@ -730,8 +730,8 @@ norm_factor = 1.0/(3.0/(2.0*dt) - nu*k_squared + mu)
 norm_factor_LF = 1.0/(3.0/(2.0*dt) - nu_LF*k_squared + mu)
 norm_factor_smooth = 1.0/(3.0/(2.0*dt) + tau2 - nu1*k_squared)
 
-j = 0; j2 = 0;  idx = 0;
-T  = []; R = []; Tau_E = [] 
+j = 0; j2 = plot_frame_rate;  idx = 0;
+T  = []; R = []; Tau_E = []; DE = [] 
 energy_HF = []; energy_LF = []; energy_UP = []
 enstrophy_HF = []; enstrophy_LF = []; enstrophy_UP = []
 
@@ -751,7 +751,7 @@ for n in range(n_steps):
     w_hat_n_prime = get_w_hat_prime(w_hat_n_LF)
 
     #exact tau_E and tau_Z
-    tau_E, tau_Z = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
+    tau_E, tau_Z, dE, dZ = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
     
     #E & Z tracking eddy forcing
     EF_hat_n_ortho_exact = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
@@ -768,10 +768,10 @@ for n in range(n_steps):
                 j3 = 0
 
                 c_i = delta_bin.get_covar(lags*store_frame_rate)
-                #r = delta_bin.get_r_ip1(c_i)[0] 
-                r = delta_bin.get_sub_mean_r_ip1(c_i)[0] 
+                r = delta_bin.get_r_ip1(c_i)[0] 
+                #r = delta_bin.get_sub_mean_r_ip1(c_i)[0] 
         else:
-            r = tau_E 
+            r = dE 
 
         #covar = np.zeros([N**2, N_c])
         covar = np.zeros([1, N_c])
@@ -846,6 +846,7 @@ for n in range(n_steps):
         if eddy_forcing_type == 'binned':
             R.append(r)
             Tau_E.append(tau_E)
+            DE.append(dE)
 
         EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
         EF = np.fft.irfft2(EF_hat)
