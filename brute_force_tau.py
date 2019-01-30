@@ -705,7 +705,7 @@ if eddy_forcing_type == 'binned':
     
     #########################
     
-    N_bins = 40
+    N_bins = 10
     
     print 'Creating Binning object...'
     if binning_type == 'global':
