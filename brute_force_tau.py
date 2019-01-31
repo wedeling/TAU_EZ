@@ -456,6 +456,10 @@ def compute_E_and_Z(w_hat_n, verbose=True):
         print 'Energy = ', E, ', enstrophy = ', Z
     return E, Z
 
+#compute the (temporal) correlation coeffient 
+def corr_coef(X, Y):
+    return np.mean((X - np.mean(X))*(Y - np.mean(Y)))/(np.std(X)*np.std(Y))
+
 """
 ***************************
 * M A I N   P R O G R A M *
@@ -526,7 +530,7 @@ mu = 1.0/(day*decay_time_mu)
 #start, end time (in days) + time step
 t = 250.0*day
 #t_end = t + 8.0*365*day
-t_end = 500.0*day
+t_end = 260.0*day
 t_data = 500.0*day
 
 dt = 0.01
@@ -540,6 +544,7 @@ sim_ID = 'tau_EZ_PE_HF'
 #store_frame_rate = np.floor(0.05*day/dt).astype('int')
 store_frame_rate = 1
 plot_frame_rate = np.floor(0.25*day/dt).astype('int')
+corr_frame_rate = np.floor(0.25*day/dt).astype('int')
 S = np.floor(n_steps/store_frame_rate).astype('int')
 
 tau_E_max = 1.0
@@ -548,10 +553,11 @@ tau_Z_max = 1.0
 state_store = False 
 restart = True
 store = False
-store_fig = True
+store_fig = False 
 plot = True
+corr = True
 smooth = False
-eddy_forcing_type = 'binned'
+eddy_forcing_type = 'tau_ortho'
 binning_type = 'global'
 
 if sim_ID == 'tau_EZ' or sim_ID == 'tau_EZ_PE_HF':
@@ -722,6 +728,25 @@ if eddy_forcing_type == 'binned':
 
     delta_bin.print_bin_info()
 
+#############################
+# SPECIFY CORRELATION PARAM #
+#############################
+#To compute the correlation between dE & dZ and some specified set of covariates
+
+if corr == True:
+
+    covars = ['e_LF', 'z_LF', 's_LF']
+    correlation = {}
+
+    correlation['dE'] = []
+    correlation['dZ'] = []
+    correlation['t'] = []
+
+    for i in range(len(covars)):
+        correlation[covars[i]] = []
+
+#############################
+
 #smoothing parameters
 tau1 = 1.0; tau2 = 1.0; nu1 = 1.0
 
@@ -730,7 +755,7 @@ norm_factor = 1.0/(3.0/(2.0*dt) - nu*k_squared + mu)
 norm_factor_LF = 1.0/(3.0/(2.0*dt) - nu_LF*k_squared + mu)
 norm_factor_smooth = 1.0/(3.0/(2.0*dt) + tau2 - nu1*k_squared)
 
-j = 0; j2 = plot_frame_rate;  idx = 0;
+j = 0; j2 = plot_frame_rate;  j4 = 0; idx = 0;
 T  = []; R = []; Tau_E = []; DE = [] 
 energy_HF = []; energy_LF = []; energy_UP = []
 enstrophy_HF = []; enstrophy_LF = []; enstrophy_UP = []
@@ -835,6 +860,7 @@ for n in range(n_steps):
     t += dt
     j += 1
     j2 += 1
+    j4 += 1
 
     if j == plot_frame_rate and plot == True:
         j = 0
@@ -867,8 +893,8 @@ for n in range(n_steps):
         energy_LF.append(E_LF); enstrophy_LF.append(Z_LF)
         energy_UP.append(E_UP); enstrophy_UP.append(Z_UP)
 
-        #drawnow(draw_stats)
-        drawnow(draw_2w)
+        drawnow(draw_stats)
+        #drawnow(draw_2w)
         
     #store samples to dict
     if j2 == store_frame_rate and store == True:
@@ -926,7 +952,24 @@ for n in range(n_steps):
         samples['t'][idx] = t
         
         idx += 1  
-        
+
+    if j4 == corr_frame_rate and corr == True:
+        j4 = 0
+
+        e_LF, z_LF, s_LF = get_EZS(w_hat_np1_LF)
+        e_HF, z_HF, s_HF = get_EZS(P_LF*w_hat_np1_HF)
+
+        dE = (e_HF - e_LF)/e_LF
+        dZ = (z_HF - z_LF)/z_LF
+
+        correlation['dE'].append(dE)
+        correlation['dZ'].append(dZ)
+
+        for i in range(len(covars)):
+            correlation[covars[i]].append(vars()[covars[i]])
+
+        correlation['t'].append(t)
+
     #update variables
     w_hat_nm1_HF = np.copy(w_hat_n_HF)
     w_hat_n_HF = np.copy(w_hat_np1_HF)
@@ -939,6 +982,8 @@ for n in range(n_steps):
     w_hat_nm1_UP = np.copy(w_hat_n_UP)
     w_hat_n_UP = np.copy(w_hat_np1_UP)
     VgradW_hat_nm1_UP = np.copy(VgradW_hat_n_UP)
+
+####################################
 
 #store the state of the system to allow for a simulation restart at t > 0
 if state_store == True:
@@ -957,9 +1002,13 @@ if state_store == True:
     
     cPickle.dump(state, open(HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t_end/day,1)) + '.pickle', 'w'))
 
+####################################
+
 #store the samples
 if store == True:
     store_samples_hdf5() 
+
+####################################
 
 #store the drawnow figue to file in order to load at a later and and tweak it
 if store_fig == True and plot == True:
@@ -971,5 +1020,29 @@ if store_fig == True and plot == True:
     #generate random filename
     import uuid
     cPickle.dump(ax, open(HOME + '/figures/fig_' + str(uuid.uuid1())[0:8] + '.pickle', 'w'))
+
+####################################
+
+if corr == True:
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.plot(correlation['t'], (correlation['dE'] - np.mean(correlation['dE']))/(np.std(correlation['dE'])), '--k')
+    ax.plot(correlation['t'], (correlation['dZ'] - np.mean(correlation['dZ']))/(np.std(correlation['dZ'])), '--b')
+
+    for i in range(len(covars)):
+        correlation['dE_rho_' + covars[i]] = corr_coef(correlation['dE'], correlation[covars[i]]) 
+        correlation['dZ_rho_' + covars[i]] = corr_coef(correlation['dZ'], correlation[covars[i]]) 
+
+        ax.plot(correlation['t'], (correlation[covars[i]] - np.mean(correlation[covars[i]]))/np.std(correlation[covars[i]]), label=covars[i])
+
+        print 'dE_rho_' + covars[i], correlation['dE_rho_' + covars[i]]
+        print 'dZ_rho_' + covars[i], correlation['dZ_rho_' + covars[i]]
+
+    leg = plt.legend(loc=0)
+    leg.draggable(True)
+
+####################################
 
 plt.show()
