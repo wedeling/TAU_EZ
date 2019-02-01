@@ -530,7 +530,7 @@ mu = 1.0/(day*decay_time_mu)
 #start, end time (in days) + time step
 t = 250.0*day
 #t_end = t + 8.0*365*day
-t_end = 260.0*day
+t_end = 500.0*day
 t_data = 500.0*day
 
 dt = 0.01
@@ -554,7 +554,7 @@ state_store = False
 restart = True
 store = False
 store_fig = False 
-plot = True
+plot = False
 corr = True
 smooth = False
 eddy_forcing_type = 'tau_ortho'
@@ -735,7 +735,9 @@ if eddy_forcing_type == 'binned':
 
 if corr == True:
 
-    covars = ['e_LF', 'z_LF', 's_LF']
+    covars = ['e_n_LF', 'z_n_LF', 's_n_LF', 's_n_prime', \
+              '2.0*mu*u_n_LF - 2.0*tau_E*s_n_prime', \
+              '(2.0*mu*dt - 1.0)*e_n_LF + 2.0*nu*dt*z_n_LF + 2.0*mu*dt*u_n_LF - 2.0*tau_E*dt*s_n_prime']
     correlation = {}
 
     correlation['dE'] = []
@@ -955,18 +957,30 @@ for n in range(n_steps):
 
     if j4 == corr_frame_rate and corr == True:
         j4 = 0
+        
+        #if np.mod(n, np.round(day/dt)) == 0:
+        print 'n = ', n, ' of ', n_steps
 
-        e_LF, z_LF, s_LF = get_EZS(w_hat_np1_LF)
-        e_HF, z_HF, s_HF = get_EZS(P_LF*w_hat_np1_HF)
+        e_n_LF, z_n_LF, s_n_LF = get_EZS(w_hat_n_LF)
+        e_np1_LF, z_np1_LF, s_np1_LF = get_EZS(w_hat_np1_LF)
+        e_np1_HF, z_np1_HF, s_np1_HF = get_EZS(P_LF*w_hat_np1_HF)
+        
+        #compute 0.5*(Psi_LF, F) := U_LF
+        psi_n_LF = np.fft.irfft2(get_psi_hat(w_hat_n_LF))
+        u_n_LF = 0.5*simps(simps(psi_n_LF*F, axis), axis)/(2.0*np.pi)**2
 
-        dE = (e_HF - e_LF)/e_LF
-        dZ = (z_HF - z_LF)/z_LF
+        #compute S'
+        s_n_prime = e_n_LF**2/z_n_LF - s_n_LF
+      
+        #targets
+        dE = (e_np1_HF - e_np1_LF)#/e_np1_LF
+        dZ = (z_np1_HF - z_np1_LF)#/z_LF
 
         correlation['dE'].append(dE)
         correlation['dZ'].append(dZ)
 
         for i in range(len(covars)):
-            correlation[covars[i]].append(vars()[covars[i]])
+            correlation[covars[i]].append(eval(covars[i]))
 
         correlation['t'].append(t)
 
