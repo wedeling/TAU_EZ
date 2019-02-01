@@ -735,9 +735,9 @@ if eddy_forcing_type == 'binned':
 
 if corr == True:
 
-    covars = ['e_n_LF', 'z_n_LF', 's_n_LF', 's_n_prime', \
-              '2.0*mu*u_n_LF - 2.0*tau_E*s_n_prime', \
-              '(2.0*mu*dt - 1.0)*e_n_LF + 2.0*nu*dt*z_n_LF + 2.0*mu*dt*u_n_LF - 2.0*tau_E*dt*s_n_prime']
+    covars = ['s_n_prime', 'u_n_LF',\
+              'tau_E*s_n_prime', \
+              '2.0*mu*e_n_LF + 2.0*nu*z_n_LF + 2.0*mu*u_n_LF - 2.0*tau_E*s_n_prime']
     correlation = {}
 
     correlation['dE'] = []
