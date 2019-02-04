@@ -64,17 +64,17 @@ for i in range(N_inputs):
          
         print h5f.keys()
 
-        x_E_HF, pdf_E_HF = get_pde(h5f['e_HF'])
-        x_E_LF, pdf_E_LF = get_pde(h5f['e_LF'])
+        x_E_HF, pdf_E_HF = get_pde(h5f['e_np1_HF'])
+        x_E_LF, pdf_E_LF = get_pde(h5f['e_np1_LF'])
         #x_E_UP, pdf_E_UP = get_pde(h5f['e_UP'])
-        x_Z_HF, pdf_Z_HF = get_pde(h5f['z_HF'])
-        x_Z_LF, pdf_Z_LF = get_pde(h5f['z_LF'])
+        x_Z_HF, pdf_Z_HF = get_pde(h5f['z_np1_HF'])
+        x_Z_LF, pdf_Z_LF = get_pde(h5f['z_np1_LF'])
         #x_Z_UP, pdf_Z_UP = get_pde(h5f['z_UP'])
 
         ax1.plot(x_E_LF, pdf_E_LF, mark, label=lbl.next())
         ax2.plot(x_Z_LF, pdf_Z_LF, mark, label=lbl.next())
 
-        ax3.plot(h5f['t'], h5f['e_LF'])
+        ax3.plot(h5f['t'], h5f['e_np1_LF'])
         #ax4.plot(h5f['t'], h5f['rho'])
         ax5.plot(h5f['t'], h5f['tau_E'], label=r'$\tau_E$')
         ax5.plot(h5f['t'], h5f['tau_Z'], label=r'$\tau_Z$')
@@ -87,7 +87,7 @@ for i in range(N_inputs):
             ax2.plot(x_Z_HF, pdf_Z_HF, '--k', label=r'$\mathrm{reference}$')
             #ax1.plot(x_E_UP, pdf_E_UP, ':k', label=r'$\mathrm{unparam.}$')
             #ax2.plot(x_Z_UP, pdf_Z_UP, ':k', label=r'$\mathrm{unparam.}$')
-            ax3.plot(h5f['t'], h5f['e_HF'], '--k')
+            ax3.plot(h5f['t'], h5f['e_np1_HF'], '--k')
             #ax3.plot(h5f['t'], h5f['e_UP'], ':k')
 
     except IOError:
