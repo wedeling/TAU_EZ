@@ -717,7 +717,7 @@ if eddy_forcing_type == 'binned':
     
     #########################
     
-    N_bins = 100
+    N_bins = 10
    
     print c_i
     print r 
@@ -726,8 +726,8 @@ if eddy_forcing_type == 'binned':
     if binning_type == 'global':
         from binning import *
         delta_bin = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
-        #if N_c == 1:
-        #    delta_bin.compute_surrogate_jump_probabilities(plot = True)
+        if N_c == 1:
+            delta_bin.compute_surrogate_jump_probabilities(plot = True)
         #    delta_bin.compute_jump_probabilities()
         #    delta_bin.plot_jump_pmfs()
     else:
@@ -736,6 +736,7 @@ if eddy_forcing_type == 'binned':
     print 'done'
 
     delta_bin.print_bin_info()
+"""
 
 #############################
 # SPECIFY CORRELATION PARAM #
@@ -1077,5 +1078,5 @@ if corr == True:
     leg.draggable(True)
 
 ####################################
-
+"""
 plt.show()
