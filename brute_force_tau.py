@@ -705,7 +705,7 @@ if eddy_forcing_type == 'binned':
             
             if covariates[i] == 'auto':
                 c_i[idx, i] = h5f['e_n_HF'][s-lags[i]] - h5f['e_n_LF'][s-lags[i]]
-            elif covariates[i] == 'tau_sprime':
+            elif covariates[i] == 'tau_E*sprime_n_LF':
                 c_i[idx, i] = h5f['tau_E'][s-lags[i]]*h5f['sprime_n_LF'][s-lags[i]]
             else:
                 c_i[idx, i] = h5f[covariates[i]][s-lags[i]]
@@ -717,7 +717,7 @@ if eddy_forcing_type == 'binned':
     
     #########################
     
-    N_bins = 20
+    N_bins = 100
    
     print c_i
     print r 
@@ -828,7 +828,8 @@ for n in range(n_steps):
             if covariates[i] == 'auto':
                 covar[:, i] = r.flatten()
             else:
-                covar[:, i] = vars()[covariates[i]].flatten()
+                #covar[:, i] = vars()[covariates[i]].flatten()
+                covar[:, i] = eval(covariates[i])
         
         delta_bin.append_covar(covar)
 

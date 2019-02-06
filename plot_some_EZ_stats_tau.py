@@ -44,7 +44,7 @@ fig3 = plt.figure('rho')
 ax4 = fig3.add_subplot(111)
 
 fig4 = plt.figure('tau')
-ax5 = fig4.add_subplot(111)
+ax5 = fig4.add_subplot(111, xlabel=r'$t\;[days]$')
 
 markers = cycle(['r', 'g', 'b', 'y'])
 lbl = cycle(['with tau']) 
@@ -76,8 +76,8 @@ for i in range(N_inputs):
 
         ax3.plot(h5f['t'], h5f['e_np1_LF'])
         #ax4.plot(h5f['t'], h5f['rho'])
-        ax5.plot(h5f['t'], h5f['tau_E'], label=r'$\tau_E$')
-        ax5.plot(h5f['t'], h5f['tau_Z'], label=r'$\tau_Z$')
+        ax5.plot(h5f['t'][:]/day, h5f['tau_E'],  label=r'$\tau_E$')
+        ax5.plot(h5f['t'][:]/day, h5f['tau_Z'], '--', label=r'$\tau_Z$')
 
         print 'Mean tau_E =', np.mean(h5f['tau_E'])
         print 'Mean tau_Z =', np.mean(h5f['tau_Z'])
