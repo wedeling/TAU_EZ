@@ -245,11 +245,11 @@ def get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P, tau_max_E, tau_max_Z):
     E_HF = compute_E(P*w_hat_n_HF)
     Z_HF = compute_Z(P*w_hat_n_HF)
 
-    dE = (E_HF - E_LF)/E_LF
-    dZ = (Z_HF - Z_LF)/Z_LF
+    dE = (E_HF - E_LF)#/E_LF
+    dZ = (Z_HF - Z_LF)#/Z_LF
 
-    tau_E = tau_max_E*np.tanh(dE)*np.sign(src_E)
-    tau_Z = tau_max_Z*np.tanh(dZ)*np.sign(src_Z)
+    tau_E = tau_max_E*np.tanh(dE/E_LF)*np.sign(src_E)
+    tau_Z = tau_max_Z*np.tanh(dZ/Z_LF)*np.sign(src_Z)
     
     return tau_E, tau_Z, dE, dZ
 
@@ -552,12 +552,12 @@ tau_Z_max = 1.0
 
 state_store = False 
 restart = True
-store = True 
-store_fig = False 
+store = False
+store_fig = True
 plot = True
-corr = False
+corr = False 
 smooth = False
-eddy_forcing_type = 'tau_ortho'
+eddy_forcing_type = 'binned'
 binning_type = 'global'
 
 if sim_ID == 'tau_EZ' or sim_ID == 'tau_EZ_PE_HF':
@@ -704,7 +704,7 @@ if eddy_forcing_type == 'binned':
         for i in range(N_c):
             
             if covariates[i] == 'auto':
-                c_i[idx, i] = h5f['e_np1_HF'][s-lags[i]] - h5f['e_np1_LF'][s-lags[i]]
+                c_i[idx, i] = h5f['e_n_HF'][s-lags[i]] - h5f['e_n_LF'][s-lags[i]]
             elif covariates[i] == 'tau_sprime':
                 c_i[idx, i] = h5f['tau_E'][s-lags[i]]*h5f['sprime_n_LF'][s-lags[i]]
             else:
@@ -717,8 +717,11 @@ if eddy_forcing_type == 'binned':
     
     #########################
     
-    N_bins = 100
-    
+    N_bins = 20
+   
+    print c_i
+    print r 
+
     print 'Creating Binning object...'
     if binning_type == 'global':
         from binning import *
@@ -913,8 +916,8 @@ for n in range(n_steps):
         energy_LF.append(E_LF); enstrophy_LF.append(Z_LF)
         energy_UP.append(E_UP); enstrophy_UP.append(Z_UP)
 
-        drawnow(draw_stats)
-        #drawnow(draw_2w)
+        #drawnow(draw_stats)
+        drawnow(draw_2w)
         
     #store samples to dict
     if j2 == store_frame_rate and store == True:
@@ -936,8 +939,9 @@ for n in range(n_steps):
         samples['z_np1_LF'][idx] = z_np1_LF
         samples['e_n_UP'][idx] = e_n_UP
         samples['z_n_UP'][idx] = z_n_UP
-        samples['e_n_LF'][idx] = e_n_LF
         samples['z_n_LF'][idx] = z_n_LF
+        samples['e_n_LF'][idx] = e_n_LF
+        samples['u_n_LF'][idx] = u_n_LF
         samples['s_n_LF'][idx] = s_n_LF
         samples['sprime_n_LF'][idx] = sprime_n_LF
         samples['zprime_n_LF'][idx] = zprime_n_LF
