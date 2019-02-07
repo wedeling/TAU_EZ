@@ -222,7 +222,7 @@ def get_data_driven_tau(w_hat_n_LF, w_hat_n_HF, P, tau_max):
 
     tau = tau_max*np.tanh(dE)
     
-    return tau
+    return tau, dE
 
 def get_data_driven_tau_Z(w_hat_n_LF, w_hat_n_HF, P, tau_max):
     
@@ -324,25 +324,6 @@ def compute_Z(w_hat_n):
     Z = simps(simps(z_n, axis), axis)/(2*np.pi)**2
     
     return Z
-
-#using the full dE ODE
-def get_exact_tau_full(w_hat_n_LF, w_hat_nm1_LF, w_hat_n_HF, w_hat_nm1_HF):
-
-    psi_hat_n_LF = get_psi_hat(w_hat_n_LF)
-    psi_hat_n_HF = get_psi_hat(w_hat_n_HF)
-    dPsi_n = np.fft.irfft2(psi_hat_n_HF - psi_hat_n_LF)
-   
-    E_HF_n, Z_HF_n = compute_E_and_Z(w_hat_n_HF, False)   
-    E_HF_nm1, Z_HF_nm1 = compute_E_and_Z(w_hat_nm1_HF, False)   
-    E_LF_n, Z_LF_n = compute_E_and_Z(w_hat_n_LF, False)   
-    E_LF_nm1, Z_LF_nm1 = compute_E_and_Z(w_hat_nm1_LF, False)   
-
-    dE_n = E_HF_n - E_LF_n
-    dE_nm1 = E_HF_nm1 - E_LF_nm1
-    dZ_n = Z_HF_n - Z_LF_n
-    dPsiF = simps(simps(dPsi_n*F, axis), axis)/(2*np.pi)**2
-
-    return -1.0/(2.0*E_LF_n)*((dE_n - dE_nm1)/dt + 2.0*nu*dZ_n + 2.0*mu*dE_n + mu*dPsiF)
 
 #initial model, no dE and dZ contributions
 def get_exact_tau(w_hat_n_LF, w_hat_n_HF):
@@ -529,8 +510,8 @@ mu = 1.0/(day*decay_time_mu)
 
 #start, end time (in days) + time step
 t = 250.0*day
-#t_end = t + 8.0*365*day
-t_end = 500.0*day
+t_end = t + 8.0*365*day
+#t_end = 251.0*day
 t_data = 500.0*day
 
 dt = 0.01
@@ -552,13 +533,13 @@ tau_Z_max = 1.0
 
 state_store = False 
 restart = True
-store = False
-store_fig = True
-plot = True
-corr = False 
+store = True
+store_fig = False 
+plot = False
+corr = False
 smooth = False
-eddy_forcing_type = 'binned'
-binning_type = 'global'
+eddy_forcing_type = 'tau'
+binning_type = 'exact'
 
 if sim_ID == 'tau_EZ' or sim_ID == 'tau_EZ_PE_HF':
     print 'Using HF nu_LF'
@@ -583,9 +564,10 @@ store_ID = sim_ID + '_' + binning_type + '_' + sim_number
 
 #training data QoI
 #QoI = ['e_HF', 'z_HF', 's_HF', 'dE', 'dZ', 'e_LF', 'z_LF', 's_LF', 'e_UP', 'z_UP', 's_UP', 'tau_E', 'tau_Z', 't']
-QoI = ['z_np1_HF', 'e_np1_HF', 'z_np1_LF', 'e_np1_LF', \
-       'z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF', 'sprime_n_LF', 'zprime_n_LF', \
-       'z_n_UP', 'e_n_UP', 'tau_E', 'tau_Z', 't']
+QoI = ['z_n_HF', 'e_n_HF', 'z_n_UP', 'e_n_UP', \
+       'z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF', 'v_n_LF', 'o_n_LF', \
+       'sprime_n_LF', 'zprime_n_LF', \
+       'tau_E', 'tau_Z', 't']
 
 #prediction data QoI
 #QoI = ['e_HF', 'z_HF', 'e_LF', 'z_LF', 'e_UP', 'z_UP', 'tau_E', 'tau_Z', 'rho', 't']
@@ -746,7 +728,6 @@ if eddy_forcing_type == 'binned':
     print 'done'
 
     delta_bin.print_bin_info()
-"""
 
 #############################
 # SPECIFY CORRELATION PARAM #
@@ -755,9 +736,7 @@ if eddy_forcing_type == 'binned':
 
 if corr == True:
 
-    covars = ['s_n_prime', 'u_n_LF',\
-              'tau_E*s_n_prime', \
-              '2.0*mu*e_n_LF + 2.0*nu*z_n_LF + 2.0*mu*u_n_LF - 2.0*tau_E*s_n_prime']
+    covars = ['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF', 'v_n_LF', 'o_n_LF', 'sprime_n_LF', 'zprime_n_LF', 'tau_E*sprime_n_LF', 'tau_Z*zprime_n_LF']
     correlation = {}
 
     correlation['dE'] = []
@@ -797,11 +776,14 @@ for n in range(n_steps):
     psi_hat_n_prime = get_psi_hat_prime(w_hat_n_LF)
     w_hat_n_prime = get_w_hat_prime(w_hat_n_LF)
 
-    #exact tau_E and tau_Z
-    tau_E, tau_Z, dE, dZ = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
-    
-    #E & Z tracking eddy forcing
-    EF_hat_n_ortho_exact = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
+    ##exact tau_E and tau_Z
+    #tau_E, tau_Z, dE, dZ = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
+    #
+    ##E & Z tracking eddy forcing
+    #EF_hat_n_ortho_exact = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
+
+    tau_E, dE = get_data_driven_tau(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max)
+    tau_Z = 0.0
 
     ##############
     # covariates #
@@ -811,6 +793,10 @@ for n in range(n_steps):
 
     psi_n_LF = np.fft.irfft2(get_psi_hat(w_hat_n_LF))
     u_n_LF = 0.5*simps(simps(psi_n_LF*F, axis), axis)/(2.0*np.pi)**2
+    w_n_LF = np.fft.irfft2(w_hat_n_LF)
+    v_n_LF = 0.5*simps(simps(w_n_LF*F, axis), axis)/(2.0*np.pi)**2
+    nabla2_w_n_LF = np.fft.irfft2(k_squared*w_hat_n_LF)
+    o_n_LF = 0.5*simps(simps(nabla2_w_n_LF*w_n_LF, axis), axis)/(2.0*np.pi)**2
 
     #compute S' and Z'
     sprime_n_LF = e_n_LF**2/z_n_LF - s_n_LF
@@ -849,7 +835,7 @@ for n in range(n_steps):
         j3 += 1
 
     elif eddy_forcing_type == 'tau':
-        EF_hat = -tau_Z*w_hat_n_LF
+        EF_hat = -tau_E*w_hat_n_LF
     elif eddy_forcing_type == 'tau_eddy_visc':
         EF_hat = -tau_E*(kx**2 + ky**2)*w_hat_n_LF
     elif eddy_forcing_type == 'tau_ortho':
@@ -928,8 +914,8 @@ for n in range(n_steps):
         energy_LF.append(E_LF); enstrophy_LF.append(Z_LF)
         energy_UP.append(E_UP); enstrophy_UP.append(Z_UP)
 
-        #drawnow(draw_stats)
-        drawnow(draw_2w)
+        drawnow(draw_stats)
+        #drawnow(draw_2w)
         
     #store samples to dict
     if j2 == store_frame_rate and store == True:
@@ -945,16 +931,18 @@ for n in range(n_steps):
         e_np1_HF, z_np1_HF, _ = get_EZS(P_LF*w_hat_np1_HF)
         e_np1_LF, z_np1_LF, _ = get_EZS(w_hat_np1_LF)
 
-        samples['e_np1_HF'][idx] = e_np1_HF
-        samples['z_np1_HF'][idx] = z_np1_HF
-        samples['e_np1_LF'][idx] = e_np1_LF
-        samples['z_np1_LF'][idx] = z_np1_LF
+        samples['e_n_HF'][idx] = e_np1_HF
+        samples['z_n_HF'][idx] = z_np1_HF
+        #samples['e_np1_LF'][idx] = e_np1_LF
+        #samples['z_np1_LF'][idx] = z_np1_LF
         samples['e_n_UP'][idx] = e_n_UP
         samples['z_n_UP'][idx] = z_n_UP
         samples['z_n_LF'][idx] = z_n_LF
         samples['e_n_LF'][idx] = e_n_LF
         samples['u_n_LF'][idx] = u_n_LF
         samples['s_n_LF'][idx] = s_n_LF
+        samples['v_n_LF'][idx] = v_n_LF
+        samples['o_n_LF'][idx] = o_n_LF
         samples['sprime_n_LF'][idx] = sprime_n_LF
         samples['zprime_n_LF'][idx] = zprime_n_LF
         samples['tau_E'][idx] = tau_E
@@ -988,23 +976,23 @@ for n in range(n_steps):
     if j4 == corr_frame_rate and corr == True:
         j4 = 0
         
-        #if np.mod(n, np.round(day/dt)) == 0:
-        print 'n = ', n, ' of ', n_steps
+        ##if np.mod(n, np.round(day/dt)) == 0:
+        #print 'n = ', n, ' of ', n_steps
 
-        e_n_LF, z_n_LF, s_n_LF = get_EZS(w_hat_n_LF)
-        e_np1_LF, z_np1_LF, s_np1_LF = get_EZS(w_hat_np1_LF)
-        e_np1_HF, z_np1_HF, s_np1_HF = get_EZS(P_LF*w_hat_np1_HF)
-        
-        #compute 0.5*(Psi_LF, F) := U_LF
-        psi_n_LF = np.fft.irfft2(get_psi_hat(w_hat_n_LF))
-        u_n_LF = 0.5*simps(simps(psi_n_LF*F, axis), axis)/(2.0*np.pi)**2
+        #e_n_LF, z_n_LF, s_n_LF = get_EZS(w_hat_n_LF)
+        #e_np1_LF, z_np1_LF, s_np1_LF = get_EZS(w_hat_np1_LF)
+        #e_np1_HF, z_np1_HF, s_np1_HF = get_EZS(P_LF*w_hat_np1_HF)
+        #
+        ##compute 0.5*(Psi_LF, F) := U_LF
+        #psi_n_LF = np.fft.irfft2(get_psi_hat(w_hat_n_LF))
+        #u_n_LF = 0.5*simps(simps(psi_n_LF*F, axis), axis)/(2.0*np.pi)**2
 
-        #compute S'
-        s_n_prime = e_n_LF**2/z_n_LF - s_n_LF
+        ##compute S'
+        #s_n_prime = e_n_LF**2/z_n_LF - s_n_LF
       
-        #targets
-        dE = (e_np1_HF - e_np1_LF)#/e_np1_LF
-        dZ = (z_np1_HF - z_np1_LF)#/z_LF
+        ##targets
+        #dE = (e_np1_HF - e_np1_LF)#/e_np1_LF
+        #dZ = (z_np1_HF - z_np1_LF)#/z_LF
 
         correlation['dE'].append(dE)
         correlation['dZ'].append(dZ)
@@ -1075,18 +1063,45 @@ if corr == True:
     ax.plot(correlation['t'], (correlation['dE'] - np.mean(correlation['dE']))/(np.std(correlation['dE'])), '--k')
     ax.plot(correlation['t'], (correlation['dZ'] - np.mean(correlation['dZ']))/(np.std(correlation['dZ'])), '--b')
 
+    print '***************************'
+
+    print '\\begin{table}'
+    print '\\centering'
+    print '\\begin{tabular}{ccc}'
+    print '\\hline\\hline'
+    print  '$\mathrm{cond.\;var.}$ & $\Delta E$ & $\Delta Z$ \\\\'
+    print '\\hline'
+
     for i in range(len(covars)):
         correlation['dE_rho_' + covars[i]] = corr_coef(correlation['dE'], correlation[covars[i]]) 
         correlation['dZ_rho_' + covars[i]] = corr_coef(correlation['dZ'], correlation[covars[i]]) 
 
         ax.plot(correlation['t'], (correlation[covars[i]] - np.mean(correlation[covars[i]]))/np.std(correlation[covars[i]]), label=covars[i])
 
-        print 'dE_rho_' + covars[i], correlation['dE_rho_' + covars[i]]
-        print 'dZ_rho_' + covars[i], correlation['dZ_rho_' + covars[i]]
+        print covars[i] + '&' + str(np.around(correlation['dE_rho_' + covars[i]], 4)) + '&' + str(np.around(correlation['dZ_rho_' + covars[i]], 4)) + '\\\\'
 
+    print '\\hline\\hline'
+    print '\\end{tabular}'
+    print '\\caption{Correlation coefficients. \\label{tab:rho}}'
+    print '\\end{table}'
+    print '***************************'
+    
     leg = plt.legend(loc=0)
     leg.draggable(True)
 
 ####################################
-"""
+
+#store the drawnow figue to file in order to load at a later and and tweak it
+if store_fig == True and plot == True:
+    ax = plt.gca()
+
+    if os.path.exists(HOME + '/figures') == False:
+        os.makedirs(HOME + '/figures')
+    
+    #generate random filename
+    import uuid
+    cPickle.dump(ax, open(HOME + '/figures/fig_' + str(uuid.uuid1())[0:8] + '.pickle', 'w'))
+
+####################################
+
 plt.show()
