@@ -669,8 +669,6 @@ if eddy_forcing_type == 'binned':
     S_train = h5f['t'].size
     S_extrapolate = 0 
 
-    idx = 0
-
     lag = []
     for i in range(N_c):
         lag.append(int(sys.argv[3+i]))
@@ -699,21 +697,32 @@ if eddy_forcing_type == 'binned':
     c_i = np.zeros([S_train - max_lag - S_extrapolate, N_c])
     r = np.zeros([S_train - max_lag - S_extrapolate])
 
-    for s in range(max_lag, S_train - S_extrapolate):
-        
-        for i in range(N_c):
-            
-            if covariates[i] == 'auto':
-                c_i[idx, i] = h5f['e_n_HF'][s-lags[i]] - h5f['e_n_LF'][s-lags[i]]
-            elif covariates[i] == 'tau_E*sprime_n_LF':
-                c_i[idx, i] = h5f['tau_E'][s-lags[i]]*h5f['sprime_n_LF'][s-lags[i]]
-            else:
-                c_i[idx, i] = h5f[covariates[i]][s-lags[i]]
+#    for s in range(max_lag, S_train - S_extrapolate):
+#        
+#        for i in range(N_c):
+#            
+#            if covariates[i] == 'auto':
+#                c_i[idx, i] = h5f['e_np1_HF'][s-lags[i]] - h5f['e_np1_LF'][s-lags[i]]
+#            elif covariates[i] == 'tau_E*sprime_n_LF':
+#                c_i[idx, i] = h5f['tau_E'][s-lags[i]]*h5f['sprime_n_LF'][s-lags[i]]
+#            else:
+#                c_i[idx, i] = h5f[covariates[i]][s-lags[i]]
+#
+#       #r[idx] = h5f['dE'][s] 
+#        r[idx] = h5f['e_np1_HF'][s] - h5f['e_np1_LF'][s] 
+#
+#        idx += 1
 
-       #r[idx] = h5f['dE'][s] 
-        r[idx] = h5f['e_np1_HF'][s] - h5f['e_np1_LF'][s] 
-        
-        idx += 1
+    for i in range(N_c):
+
+        if covariates[i] == 'auto':
+            c_i[:, i] = h5f['e_np1_HF'][0:-lags[i]] - h5f['e_np1_LF'][0:-lags[i]]
+        elif covariates[i] == 'tau_E*sprime_n_LF':
+            c_i[:, i] = h5f['tau_E'][0:-lags[i]]*h5f['sprime_n_LF'][0:-lags[i]]
+        else:
+            c_i[:, i] = h5f[covariates[i]][0:-lags[i]]
+
+    r[:] = h5f['e_np1_HF'][lags[i]:] - h5f['e_np1_LF'][lags[i]:]
     
     #########################
     
@@ -726,8 +735,9 @@ if eddy_forcing_type == 'binned':
     if binning_type == 'global':
         from binning import *
         delta_bin = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
-        if N_c == 1:
-            delta_bin.compute_surrogate_jump_probabilities(plot = True)
+        #delta_bin.plot_samples_per_bin(10)
+        #if N_c == 1:
+        #    delta_bin.compute_surrogate_jump_probabilities(plot = True)
         #    delta_bin.compute_jump_probabilities()
         #    delta_bin.plot_jump_pmfs()
     else:

@@ -458,23 +458,27 @@ class Binning:
             
         self.idx_per_bin_dict = idx_per_bin_dict
         
-    def plot_samples_per_bin(self):
+    def plot_samples_per_bin(self, subsample=1):
         
         if self.N_c == 1:
         
             fig = plt.figure()
-            ax = fig.add_subplot(111, xlabel=r'c', ylabel=r'r')
-            
-            marker = itertools.cycle(('b+', 'r+', 'g+', 'k+'))
+            ax = fig.add_subplot(111, xlabel=r'$\mathrm{conditioning\;variable}$', ylabel=r'$\mathrm{reference\;data}$')
             
             for b in self.unique_binnumbers:
                 
                 c_b = self.c[self.idx_per_bin_dict[b]]
                 r_b = self.r_ip1[self.idx_per_bin_dict[b]]
 
-                ax.plot(c_b, r_b, marker.next(), alpha=0.5)
-                ax.plot(np.mean(c_b), np.mean(r_b), 'm*', markersize=6)
+                ax.plot(c_b[0:-1:subsample], r_b[0:-1:subsample], '+', color='lightgray', alpha=0.3)
+                ax.plot(np.mean(c_b), np.mean(r_b), 'ko', markersize=6)
                 
+            ax.vlines(self.bins, np.min(self.r_ip1), np.max(self.r_ip1))
+            ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+            ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+            plt.tight_layout()
+            #plt.savefig('bins.png', dpi=300)
+
         plt.show()
 
     #plots the mean and std dev per bin, ASSUMES 2 COVARIATES
