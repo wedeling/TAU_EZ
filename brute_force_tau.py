@@ -168,11 +168,11 @@ def draw_w():
 
 def draw_2w():
     plt.subplot(121, xlabel=r'$t\;[days]$')
-    plt.plot(T, DE, label=r'$\Delta_E$')
-    plt.plot(T, R, label=r'$\widetilde{\Delta}_E$')
+    plt.plot(T, DZ, label=r'$\Delta Z$')
+    plt.plot(T, R, label=r'$\widetilde{\Delta Z}$')
     plt.legend(loc=0)
     plt.subplot(122)
-    plt.hist([DE, R], 20, label=[r'$\Delta_E$', r'$\widetilde{\Delta}_E$'])
+    plt.hist([DZ, R], 20, label=[r'$\Delta Z$', r'$\widetilde{\Delta_Z}$'])
     plt.legend(loc='upper right')
     plt.tight_layout()
 
@@ -510,9 +510,10 @@ mu = 1.0/(day*decay_time_mu)
 
 #start, end time (in days) + time step
 t = 250.0*day
-t_end = t + 8.0*365*day
-#t_end = 251.0*day
-t_data = 500.0*day
+#t_end = t + 8.0*365*day
+t_end = 500.0*day
+#t_data = 500.0*day
+t_data = t + 8.0*365.0*day 
 
 dt = 0.01
 n_steps = np.ceil((t_end-t)/dt).astype('int')
@@ -533,13 +534,13 @@ tau_Z_max = 1.0
 
 state_store = False 
 restart = True
-store = True
-store_fig = False 
-plot = False
+store = False
+store_fig = True 
+plot = True
 corr = False
 smooth = False
-eddy_forcing_type = 'tau'
-binning_type = 'exact'
+eddy_forcing_type = 'binned'
+binning_type = 'global'
 
 if sim_ID == 'tau_EZ' or sim_ID == 'tau_EZ_PE_HF':
     print 'Using HF nu_LF'
@@ -698,20 +699,19 @@ if eddy_forcing_type == 'binned':
     for i in range(N_c):
 
         if covariates[i] == 'auto':
-            c_i[:, i] = h5f['e_np1_HF'][0:-lags[i]] - h5f['e_np1_LF'][0:-lags[i]]
+            c_i[:, i] = h5f['e_n_HF'][0:-lags[i]] - h5f['e_n_LF'][0:-lags[i]]
         elif covariates[i] == 'tau_E*sprime_n_LF':
             c_i[:, i] = h5f['tau_E'][0:-lags[i]]*h5f['sprime_n_LF'][0:-lags[i]]
+        elif covariates[i] == 'tau_Z*zprime_n_LF':
+            c_i[:, i] = h5f['tau_Z'][0:-lags[i]]*h5f['zprime_n_LF'][0:-lags[i]]
         else:
             c_i[:, i] = h5f[covariates[i]][0:-lags[i]]
 
-    r[:] = h5f['e_np1_HF'][lags[i]:] - h5f['e_np1_LF'][lags[i]:]
+    r[:] = h5f['z_n_HF'][lags[i]:] - h5f['z_n_LF'][lags[i]:]
     
     #########################
     
-    N_bins = 10
-   
-    print c_i
-    print r 
+    N_bins = 100
 
     print 'Creating Binning object...'
     if binning_type == 'global':
@@ -757,7 +757,7 @@ norm_factor_LF = 1.0/(3.0/(2.0*dt) - nu_LF*k_squared + mu)
 norm_factor_smooth = 1.0/(3.0/(2.0*dt) + tau2 - nu1*k_squared)
 
 j = 0; j2 = 0;  j4 = 0; idx = 0;
-T  = []; R = []; Tau_E = []; DE = [] 
+T  = []; R = []; Tau_E = []; DE = []; Tau_Z = []; DZ = []  
 energy_HF = []; energy_LF = []; energy_UP = []
 enstrophy_HF = []; enstrophy_LF = []; enstrophy_UP = []
 
@@ -776,14 +776,14 @@ for n in range(n_steps):
     psi_hat_n_prime = get_psi_hat_prime(w_hat_n_LF)
     w_hat_n_prime = get_w_hat_prime(w_hat_n_LF)
 
-    ##exact tau_E and tau_Z
-    #tau_E, tau_Z, dE, dZ = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
-    #
-    ##E & Z tracking eddy forcing
-    #EF_hat_n_ortho_exact = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
+    #exact tau_E and tau_Z
+    tau_E, tau_Z, dE, dZ = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
+    
+    #E & Z tracking eddy forcing
+    EF_hat_n_ortho_exact = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
 
-    tau_E, dE = get_data_driven_tau(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max)
-    tau_Z = 0.0
+    #tau_E, dE = get_data_driven_tau(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max)
+    #tau_Z = 0.0
 
     ##############
     # covariates #
@@ -816,7 +816,7 @@ for n in range(n_steps):
                 r = delta_bin.get_r_ip1(c_i)[0] 
                 #r = delta_bin.get_sub_mean_r_ip1(c_i)[0] 
         else:
-            r = dE 
+            r = dZ 
 
         #covar = np.zeros([N**2, N_c])
         covar = np.zeros([1, N_c])
@@ -836,11 +836,8 @@ for n in range(n_steps):
 
     elif eddy_forcing_type == 'tau':
         EF_hat = -tau_E*w_hat_n_LF
-    elif eddy_forcing_type == 'tau_eddy_visc':
-        EF_hat = -tau_E*(kx**2 + ky**2)*w_hat_n_LF
     elif eddy_forcing_type == 'tau_ortho':
         EF_hat = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime
-        #EF_hat_nm1 = -tau_Z*w_hat_n_LF - tau_E*w_hat_n_LF
     elif eddy_forcing_type == 'unparam':
         EF_hat = np.zeros([N, N/2+1])
     elif eddy_forcing_type == 'exact':
@@ -894,6 +891,8 @@ for n in range(n_steps):
             R.append(r)
             Tau_E.append(tau_E)
             DE.append(dE)
+            Tau_Z.append(tau_Z)
+            DZ.append(dZ)
 
         EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
         EF = np.fft.irfft2(EF_hat)
@@ -914,8 +913,8 @@ for n in range(n_steps):
         energy_LF.append(E_LF); enstrophy_LF.append(Z_LF)
         energy_UP.append(E_UP); enstrophy_UP.append(Z_UP)
 
-        drawnow(draw_stats)
-        #drawnow(draw_2w)
+        #drawnow(draw_stats)
+        drawnow(draw_2w)
         
     #store samples to dict
     if j2 == store_frame_rate and store == True:
@@ -931,8 +930,8 @@ for n in range(n_steps):
         e_np1_HF, z_np1_HF, _ = get_EZS(P_LF*w_hat_np1_HF)
         e_np1_LF, z_np1_LF, _ = get_EZS(w_hat_np1_LF)
 
-        samples['e_n_HF'][idx] = e_np1_HF
-        samples['z_n_HF'][idx] = z_np1_HF
+        samples['e_n_HF'][idx] = e_n_HF     #actually said e_np1_HF & z_np1_HF before, regenerate training data?
+        samples['z_n_HF'][idx] = z_n_HF
         #samples['e_np1_LF'][idx] = e_np1_LF
         #samples['z_np1_LF'][idx] = z_np1_LF
         samples['e_n_UP'][idx] = e_n_UP
