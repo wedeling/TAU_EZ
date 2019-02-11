@@ -674,19 +674,12 @@ if eddy_forcing_type == 'binned':
     for j in range(N_surr):
 
         param = inputs[j]
-        #N_c = int(sys.argv[2]) 
+        
+        #read the dict
         N_c = param['N_c'] 
-
-        #lag = []
-        #for i in range(N_c):
-        #    lag.append(int(sys.argv[3+i]))
-
-        #covariates = []
-        #for i in range(N_c):
-        #    covariates.append(sys.argv[3+N_c+i])
-
         covariates = param['covariates']
         lag = param['lag']
+        target = param['target']
 
         #spatially constant lag per covariate
         lags = np.zeros(N_c).astype('int')
@@ -701,6 +694,7 @@ if eddy_forcing_type == 'binned':
         print 'Parameters'
         print '***********************'
         print 'Sim number =', sim_number
+        print 'Target =', target
         print 'Covariates =', covariates
         print 'Lags =', lag
         print '***********************'
@@ -719,11 +713,14 @@ if eddy_forcing_type == 'binned':
             else:
                 c_i[:, i] = h5f[covariates[i]][0:-lags[i]]
 
-        r[:] = h5f['z_n_HF'][lags[i]:] - h5f['z_n_LF'][lags[i]:]
+        if target == 'dZ':
+            r[:] = h5f['z_n_HF'][lags[i]:] - h5f['z_n_LF'][lags[i]:]
+        elif target == 'dE':
+            r[:] = h5f['e_n_HF'][lags[i]:] - h5f['e_n_LF'][lags[i]:]
         
         #########################
         
-        N_bins = 100
+        N_bins = 10
 
         print 'Creating Binning object...'
         if binning_type == 'global':
