@@ -455,6 +455,7 @@ from drawnow import drawnow
 from scipy.integrate import simps
 from itertools import combinations, chain
 import sys
+import json
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
@@ -637,7 +638,10 @@ else:
 #####################i
 
 if eddy_forcing_type == 'binned':
-    
+
+    ###########################
+    # load the reference data #
+    ###########################
     fname = HOME + '/samples/' + sim_ID + '_exact_training_t_' + str(np.around(t_data/day, 1)) + '.hdf5'
 
     print 'Loading', fname
@@ -645,89 +649,97 @@ if eddy_forcing_type == 'binned':
     h5f = h5py.File(fname, 'r')
 
     print h5f.keys()
-
-    #########################
-    N_c = int(sys.argv[2]) 
-
     S_train = h5f['t'].size
     S_extrapolate = 0 
 
-    lag = []
-    for i in range(N_c):
-        lag.append(int(sys.argv[3+i]))
-    
-    covariates = []
-    for i in range(N_c):
-        covariates.append(sys.argv[3+N_c+i])
+    #####################################
+    # read the inputs for the surrogate #
+    #####################################
+    N_surr = 0
+    inputs = []
+    try:
+        while True:
+            print sys.argv[2 + N_surr]
+            inputs.append(json.loads(sys.argv[2 + N_surr]))
+            N_surr += 1
+    except IndexError:
+        print '****************************'
+        print 'Creating', N_surr, ' surrogates'
+        print '****************************'
 
-    #spatially constant lag per covariate
-    lags = np.zeros(N_c).astype('int')
-    for i in range(N_c):
-        lags[i] = lag[i]
-    
-    max_lag = np.max(lags)
-    min_lag = np.min(lags)
-    j3 = min_lag*store_frame_rate
-    
-    print '***********************'
-    print 'Parameters'
-    print '***********************'
-    print 'Sim number =', sim_number
-    print 'Covariates =', covariates
-    print 'Lags =', lag
-    print '***********************'
-
-    c_i = np.zeros([S_train - max_lag - S_extrapolate, N_c])
-    r = np.zeros([S_train - max_lag - S_extrapolate])
-
-#    for s in range(max_lag, S_train - S_extrapolate):
-#        
-#        for i in range(N_c):
-#            
-#            if covariates[i] == 'auto':
-#                c_i[idx, i] = h5f['e_np1_HF'][s-lags[i]] - h5f['e_np1_LF'][s-lags[i]]
-#            elif covariates[i] == 'tau_E*sprime_n_LF':
-#                c_i[idx, i] = h5f['tau_E'][s-lags[i]]*h5f['sprime_n_LF'][s-lags[i]]
-#            else:
-#                c_i[idx, i] = h5f[covariates[i]][s-lags[i]]
-#
-#       #r[idx] = h5f['dE'][s] 
-#        r[idx] = h5f['e_np1_HF'][s] - h5f['e_np1_LF'][s] 
-#
-#        idx += 1
-
-    for i in range(N_c):
-
-        if covariates[i] == 'auto':
-            c_i[:, i] = h5f['e_n_HF'][0:-lags[i]] - h5f['e_n_LF'][0:-lags[i]]
-        elif covariates[i] == 'tau_E*sprime_n_LF':
-            c_i[:, i] = h5f['tau_E'][0:-lags[i]]*h5f['sprime_n_LF'][0:-lags[i]]
-        elif covariates[i] == 'tau_Z*zprime_n_LF':
-            c_i[:, i] = h5f['tau_Z'][0:-lags[i]]*h5f['zprime_n_LF'][0:-lags[i]]
-        else:
-            c_i[:, i] = h5f[covariates[i]][0:-lags[i]]
-
-    r[:] = h5f['z_n_HF'][lags[i]:] - h5f['z_n_LF'][lags[i]:]
-    
     #########################
-    
-    N_bins = 100
+    # create the surrogates #
+    #########################
 
-    print 'Creating Binning object...'
-    if binning_type == 'global':
-        from binning import *
-        delta_bin = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
-        #delta_bin.plot_samples_per_bin(10)
-        #if N_c == 1:
-        #    delta_bin.compute_surrogate_jump_probabilities(plot = True)
-        #    delta_bin.compute_jump_probabilities()
-        #    delta_bin.plot_jump_pmfs()
-    else:
-        from local_binning import *
-        delta_bin = Local_Binning(c, r.flatten(), N, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
-    print 'done'
+    for j in range(N_surr):
 
-    delta_bin.print_bin_info()
+        param = inputs[j]
+        #N_c = int(sys.argv[2]) 
+        N_c = param['N_c'] 
+
+        #lag = []
+        #for i in range(N_c):
+        #    lag.append(int(sys.argv[3+i]))
+
+        #covariates = []
+        #for i in range(N_c):
+        #    covariates.append(sys.argv[3+N_c+i])
+
+        covariates = param['covariates']
+        lag = param['lag']
+
+        #spatially constant lag per covariate
+        lags = np.zeros(N_c).astype('int')
+        for i in range(N_c):
+            lags[i] = lag[i]
+        
+        max_lag = np.max(lags)
+        min_lag = np.min(lags)
+        j3 = min_lag*store_frame_rate
+        
+        print '***********************'
+        print 'Parameters'
+        print '***********************'
+        print 'Sim number =', sim_number
+        print 'Covariates =', covariates
+        print 'Lags =', lag
+        print '***********************'
+
+        c_i = np.zeros([S_train - max_lag - S_extrapolate, N_c])
+        r = np.zeros([S_train - max_lag - S_extrapolate])
+
+        for i in range(N_c):
+
+            if covariates[i] == 'auto':
+                c_i[:, i] = h5f['e_n_HF'][0:-lags[i]] - h5f['e_n_LF'][0:-lags[i]]
+            elif covariates[i] == 'tau_E*sprime_n_LF':
+                c_i[:, i] = h5f['tau_E'][0:-lags[i]]*h5f['sprime_n_LF'][0:-lags[i]]
+            elif covariates[i] == 'tau_Z*zprime_n_LF':
+                c_i[:, i] = h5f['tau_Z'][0:-lags[i]]*h5f['zprime_n_LF'][0:-lags[i]]
+            else:
+                c_i[:, i] = h5f[covariates[i]][0:-lags[i]]
+
+        r[:] = h5f['z_n_HF'][lags[i]:] - h5f['z_n_LF'][lags[i]:]
+        
+        #########################
+        
+        N_bins = 100
+
+        print 'Creating Binning object...'
+        if binning_type == 'global':
+            from binning import *
+            delta_bin = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
+            #delta_bin.plot_samples_per_bin(10)
+            #if N_c == 1:
+            #    delta_bin.compute_surrogate_jump_probabilities(plot = True)
+            #    delta_bin.compute_jump_probabilities()
+            #    delta_bin.plot_jump_pmfs()
+        else:
+            from local_binning import *
+            delta_bin = Local_Binning(c, r.flatten(), N, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
+        print 'done'
+
+        delta_bin.print_bin_info()
 
 #############################
 # SPECIFY CORRELATION PARAM #
