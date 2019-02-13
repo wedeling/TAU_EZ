@@ -670,7 +670,8 @@ if eddy_forcing_type == 'binned':
     #########################
     # create the surrogates #
     #########################
-
+    
+    surrogate = {}
     for j in range(N_surr):
 
         param = inputs[j]
@@ -700,7 +701,7 @@ if eddy_forcing_type == 'binned':
         print '***********************'
 
         c_i = np.zeros([S_train - max_lag - S_extrapolate, N_c])
-        r = np.zeros([S_train - max_lag - S_extrapolate])
+        #r = np.zeros([S_train - max_lag - S_extrapolate])
 
         for i in range(N_c):
 
@@ -714,29 +715,26 @@ if eddy_forcing_type == 'binned':
                 c_i[:, i] = h5f[covariates[i]][0:-lags[i]]
 
         if target == 'dZ':
-            r[:] = h5f['z_n_HF'][lags[i]:] - h5f['z_n_LF'][lags[i]:]
+            r = h5f['z_n_HF'][lags[i]:] - h5f['z_n_LF'][lags[i]:]
         elif target == 'dE':
-            r[:] = h5f['e_n_HF'][lags[i]:] - h5f['e_n_LF'][lags[i]:]
+            r = h5f['e_n_HF'][lags[i]:] - h5f['e_n_LF'][lags[i]:]
         
         #########################
         
-        N_bins = 10
+        N_bins = 100
 
         print 'Creating Binning object...'
         if binning_type == 'global':
             from binning import *
-            delta_bin = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
-            #delta_bin.plot_samples_per_bin(10)
+            surrogate[target] = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
+            #surrogate[target].plot_samples_per_bin(10)
             #if N_c == 1:
-            #    delta_bin.compute_surrogate_jump_probabilities(plot = True)
-            #    delta_bin.compute_jump_probabilities()
-            #    delta_bin.plot_jump_pmfs()
-        else:
-            from local_binning import *
-            delta_bin = Local_Binning(c, r.flatten(), N, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
+            #    surrogate[target].compute_surrogate_jump_probabilities(plot = True)
+            #    surrogate[target].compute_jump_probabilities()
+            #    surrogate[target].plot_jump_pmfs()
         print 'done'
 
-        delta_bin.print_bin_info()
+        surrogate[target].print_bin_info()
 
 #############################
 # SPECIFY CORRELATION PARAM #
@@ -815,33 +813,38 @@ for n in range(n_steps):
 
     #SURROGATE eddy forcing
     if eddy_forcing_type == 'binned':
-    
-        if n >= max_lag*store_frame_rate:
-            
-            if j3 >= min_lag*store_frame_rate:
-                j3 = 0
+   
+        r = {}
 
-                c_i = delta_bin.get_covar(lags*store_frame_rate)
-                r = delta_bin.get_r_ip1(c_i)[0] 
-                #r = delta_bin.get_sub_mean_r_ip1(c_i)[0] 
-        else:
-            r = dZ 
+        for target in surrogate.keys():
 
-        #covar = np.zeros([N**2, N_c])
-        covar = np.zeros([1, N_c])
-        
-        for i in range(N_c):
-            if covariates[i] == 'auto':
-                covar[:, i] = r.flatten()
+            if n >= max_lag*store_frame_rate:
+                
+                if j3 >= min_lag*store_frame_rate:
+                    j3 = 0
+
+                    c_i = surrogate[target].get_covar(lags*store_frame_rate)
+                    r[target] = surrogate[target].get_r_ip1(c_i)[0] 
             else:
-                #covar[:, i] = vars()[covariates[i]].flatten()
-                covar[:, i] = eval(covariates[i])
-        
-        delta_bin.append_covar(covar)
+                r[target] = eval(target) 
+
+            #covar = np.zeros([N**2, N_c])
+            covar = np.zeros([1, N_c])
+            
+            for i in range(N_c):
+                if covariates[i] == 'auto':
+                    covar[:, i] = r[target]#.flatten()
+                else:
+                    #covar[:, i] = vars()[covariates[i]].flatten()
+                    covar[:, i] = eval(covariates[i])
+            
+            surrogate[target].append_covar(covar)
 
         #EF_hat = P_LF*np.fft.rfft2(r)
         EF_hat = EF_hat_n_ortho_exact
         j3 += 1
+
+        print r
 
     elif eddy_forcing_type == 'tau':
         EF_hat = -tau_E*w_hat_n_LF
@@ -897,7 +900,7 @@ for n in range(n_steps):
 
         T.append(t/day)
         if eddy_forcing_type == 'binned':
-            R.append(r)
+            R.append(r['dZ'])
             Tau_E.append(tau_E)
             DE.append(dE)
             Tau_Z.append(tau_Z)
