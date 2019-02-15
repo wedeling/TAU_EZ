@@ -167,13 +167,20 @@ def draw_w():
     plt.tight_layout()
 
 def draw_2w():
-    plt.subplot(121, xlabel=r'$t\;[days]$')
-    plt.plot(T, DZ, label=r'$\Delta Z$')
-    plt.plot(T, R, label=r'$\widetilde{\Delta Z}$')
-    plt.legend(loc=0)
+    plt.subplot(121)
+    plt.xlabel(r'$t\;[days]$', fontsize=14)
+    plt.plot(T, DE, label=r'$\Delta E$')
+    plt.plot(T, R_DE, '--' , label=r'$\widetilde{\Delta E}$')
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    plt.legend(loc=0, fontsize=14)
     plt.subplot(122)
-    plt.hist([DZ, R], 20, label=[r'$\Delta Z$', r'$\widetilde{\Delta_Z}$'])
-    plt.legend(loc='upper right')
+    plt.xlabel(r'$t\;[days]$', fontsize=14)
+    plt.plot(T, DZ, label=r'$\Delta Z$')
+    plt.plot(T, R_DZ, '--', label=r'$\widetilde{\Delta Z}$')
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    plt.legend(loc=0, fontsize=14)
+    #plt.hist([DZ, R], 20, label=[r'$\Delta Z$', r'$\widetilde{\Delta_Z}$'])
+    #plt.legend(loc='upper right')
     plt.tight_layout()
 
 def draw_stats():
@@ -655,69 +662,70 @@ if eddy_forcing_type == 'binned':
     #####################################
     # read the inputs for the surrogate #
     #####################################
-    N_surr = 0
+    #N_surr = 0
+    fpath = sys.argv[2]
+    fp = open(fpath, 'r')
+    N_surr = int(fp.readline())
     inputs = []
-    try:
-        while True:
-            print sys.argv[2 + N_surr]
-            inputs.append(json.loads(sys.argv[2 + N_surr]))
-            N_surr += 1
-    except IndexError:
-        print '****************************'
-        print 'Creating', N_surr, ' surrogates'
-        print '****************************'
+    
+    for i in range(N_surr):
+        inputs.append(json.loads(fp.readline()))
+        
+    print '****************************'
+    print 'Creating', N_surr, ' surrogates'
+    print '****************************'
 
     #########################
     # create the surrogates #
     #########################
     
-    surrogate = {}
+    surrogate = {}; N_c = {}; covariates = {}; lags = {}; j3 = {}
     for j in range(N_surr):
 
         param = inputs[j]
         
         #read the dict
-        N_c = param['N_c'] 
-        covariates = param['covariates']
-        lag = param['lag']
         target = param['target']
+        N_c[target] = param['N_c'] 
+        covariates[target] = param['covariates']
+        lag = param['lag']
 
         #spatially constant lag per covariate
-        lags = np.zeros(N_c).astype('int')
-        for i in range(N_c):
-            lags[i] = lag[i]
+        lags[target] = np.zeros(N_c[target]).astype('int')
+        for i in range(N_c[target]):
+            lags[target][i] = lag[i]
         
-        max_lag = np.max(lags)
-        min_lag = np.min(lags)
-        j3 = min_lag*store_frame_rate
+        max_lag = np.max(lags[target])
+        min_lag = np.min(lags[target])
+        j3[target] = min_lag*store_frame_rate
         
         print '***********************'
         print 'Parameters'
         print '***********************'
         print 'Sim number =', sim_number
         print 'Target =', target
-        print 'Covariates =', covariates
-        print 'Lags =', lag
+        print 'Covariates =', covariates[target]
+        print 'Lags =', lags[target]
         print '***********************'
 
-        c_i = np.zeros([S_train - max_lag - S_extrapolate, N_c])
+        c_i = np.zeros([S_train - max_lag - S_extrapolate, N_c[target]])
         #r = np.zeros([S_train - max_lag - S_extrapolate])
 
-        for i in range(N_c):
+        for i in range(N_c[target]):
 
-            if covariates[i] == 'auto':
-                c_i[:, i] = h5f['e_n_HF'][0:-lags[i]] - h5f['e_n_LF'][0:-lags[i]]
-            elif covariates[i] == 'tau_E*sprime_n_LF':
-                c_i[:, i] = h5f['tau_E'][0:-lags[i]]*h5f['sprime_n_LF'][0:-lags[i]]
-            elif covariates[i] == 'tau_Z*zprime_n_LF':
-                c_i[:, i] = h5f['tau_Z'][0:-lags[i]]*h5f['zprime_n_LF'][0:-lags[i]]
+            if covariates[target][i] == 'auto':
+                c_i[:, i] = h5f['e_n_HF'][0:-lags[target][i]] - h5f['e_n_LF'][0:-lags[target][i]]
+            elif covariates[target][i] == 'tau_E*sprime_n_LF':
+                c_i[:, i] = h5f['tau_E'][0:-lags[target][i]]*h5f['sprime_n_LF'][0:-lags[target][i]]
+            elif covariates[target][i] == 'tau_Z*zprime_n_LF':
+                c_i[:, i] = h5f['tau_Z'][0:-lags[target][i]]*h5f['zprime_n_LF'][0:-lags[target][i]]
             else:
-                c_i[:, i] = h5f[covariates[i]][0:-lags[i]]
+                c_i[:, i] = h5f[covariates[target][i]][0:-lags[target][i]]
 
         if target == 'dZ':
-            r = h5f['z_n_HF'][lags[i]:] - h5f['z_n_LF'][lags[i]:]
+            r = h5f['z_n_HF'][lags[target][i]:] - h5f['z_n_LF'][lags[target][i]:]
         elif target == 'dE':
-            r = h5f['e_n_HF'][lags[i]:] - h5f['e_n_LF'][lags[i]:]
+            r = h5f['e_n_HF'][lags[target][i]:] - h5f['e_n_LF'][lags[target][i]:]
         
         #########################
         
@@ -726,7 +734,7 @@ if eddy_forcing_type == 'binned':
         print 'Creating Binning object...'
         if binning_type == 'global':
             from binning import *
-            surrogate[target] = Binning(c_i, r.flatten(), 1, N_bins, lags = lags, store_frame_rate = store_frame_rate, verbose=True)
+            surrogate[target] = Binning(c_i, r.flatten(), 1, N_bins, lags = lags[target], store_frame_rate = store_frame_rate, verbose=True)
             #surrogate[target].plot_samples_per_bin(10)
             #if N_c == 1:
             #    surrogate[target].compute_surrogate_jump_probabilities(plot = True)
@@ -764,7 +772,7 @@ norm_factor_LF = 1.0/(3.0/(2.0*dt) - nu_LF*k_squared + mu)
 norm_factor_smooth = 1.0/(3.0/(2.0*dt) + tau2 - nu1*k_squared)
 
 j = 0; j2 = 0;  j4 = 0; idx = 0;
-T  = []; R = []; Tau_E = []; DE = []; Tau_Z = []; DZ = []  
+T  = []; R_DE = []; R_DZ = []; Tau_E = []; DE = []; Tau_Z = []; DZ = []  
 energy_HF = []; energy_LF = []; energy_UP = []
 enstrophy_HF = []; enstrophy_LF = []; enstrophy_UP = []
 
@@ -820,31 +828,30 @@ for n in range(n_steps):
 
             if n >= max_lag*store_frame_rate:
                 
-                if j3 >= min_lag*store_frame_rate:
-                    j3 = 0
+                if j3[target] >= min_lag*store_frame_rate:
+                    j3[target] = 0
 
-                    c_i = surrogate[target].get_covar(lags*store_frame_rate)
-                    r[target] = surrogate[target].get_r_ip1(c_i)[0] 
+                    c_i = surrogate[target].get_covar(lags[target]*store_frame_rate)
+                    r[target] = surrogate[target].get_r_ip1(c_i)[0]
             else:
                 r[target] = eval(target) 
 
             #covar = np.zeros([N**2, N_c])
-            covar = np.zeros([1, N_c])
+            covar = np.zeros([1, N_c[target]])
             
-            for i in range(N_c):
-                if covariates[i] == 'auto':
+            for i in range(N_c[target]):
+                if covariates[target][i] == 'auto':
                     covar[:, i] = r[target]#.flatten()
                 else:
                     #covar[:, i] = vars()[covariates[i]].flatten()
-                    covar[:, i] = eval(covariates[i])
+                    covar[:, i] = eval(covariates[target][i])
             
             surrogate[target].append_covar(covar)
 
+            j3[target] += 1
+
         #EF_hat = P_LF*np.fft.rfft2(r)
         EF_hat = EF_hat_n_ortho_exact
-        j3 += 1
-
-        print r
 
     elif eddy_forcing_type == 'tau':
         EF_hat = -tau_E*w_hat_n_LF
@@ -900,7 +907,9 @@ for n in range(n_steps):
 
         T.append(t/day)
         if eddy_forcing_type == 'binned':
-            R.append(r['dZ'])
+            print r
+            R_DE.append(r['dE'])
+            R_DZ.append(r['dZ'])
             Tau_E.append(tau_E)
             DE.append(dE)
             Tau_Z.append(tau_Z)
