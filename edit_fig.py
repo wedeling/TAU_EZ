@@ -7,9 +7,5 @@ fname = sys.argv[1]
 
 ax = cPickle.load(open(HOME + '/figures/' + fname, 'r'))
 
-fig = plt.gcf()
-
-fig.set_size_inches(8, 4)
-
 
 plt.show()

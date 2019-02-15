@@ -169,14 +169,18 @@ def draw_w():
 def draw_2w():
     plt.subplot(121)
     plt.xlabel(r'$t\;[days]$', fontsize=14)
-    plt.plot(T, DE, label=r'$\Delta E$')
-    plt.plot(T, R_DE, '--' , label=r'$\widetilde{\Delta E}$')
+    #plt.plot(T, DE, label=r'$\Delta E$')
+    #plt.plot(T, R_DE, '--' , label=r'$\widetilde{\Delta E}$')
+    plt.plot(T, Tau_E, label=r'$\tau E$')
+    plt.plot(T, R_tau_E, '--' , label=r'$\widetilde{\tau E}$')
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     plt.legend(loc=0, fontsize=14)
     plt.subplot(122)
     plt.xlabel(r'$t\;[days]$', fontsize=14)
-    plt.plot(T, DZ, label=r'$\Delta Z$')
-    plt.plot(T, R_DZ, '--', label=r'$\widetilde{\Delta Z}$')
+    #plt.plot(T, DZ, label=r'$\Delta Z$')
+    #plt.plot(T, R_DZ, '--', label=r'$\widetilde{\Delta Z}$')
+    plt.plot(T, Tau_Z, label=r'$\tau Z$')
+    plt.plot(T, R_tau_Z, '--', label=r'$\widetilde{\tau Z}$')
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     plt.legend(loc=0, fontsize=14)
     #plt.hist([DZ, R], 20, label=[r'$\Delta Z$', r'$\widetilde{\Delta_Z}$'])
@@ -259,6 +263,21 @@ def get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P, tau_max_E, tau_max_Z):
     tau_Z = tau_max_Z*np.tanh(dZ/Z_LF)*np.sign(src_Z)
     
     return tau_E, tau_Z, dE, dZ
+
+def get_surrogate_tau_src_EZ(w_hat_n_LF, r, tau_max_E, tau_max_Z):
+    
+    E_LF, Z_LF, S_LF = get_EZS(w_hat_n_LF)
+
+    src_E = E_LF**2/Z_LF - S_LF
+    src_Z = -E_LF**2/S_LF + Z_LF
+
+    dE = r['dE'] 
+    dZ = r['dZ']
+
+    tau_E = tau_max_E*np.tanh(dE/E_LF)*np.sign(src_E)
+    tau_Z = tau_max_Z*np.tanh(dZ/Z_LF)*np.sign(src_Z)
+    
+    return tau_E, tau_Z
 
 def get_EZS(w_hat_n):
 
@@ -411,21 +430,6 @@ def get_exact_tau4(w_hat_n_LF, w_hat_n_HF):
 
     return 1.0/(2.0*Z_LF)*(-2.0*nu*dZ - 2.0*mu*dE - mu*dPsiF)
 
-#Zanna model, no dE and dZ contributions
-def get_exact_tau_Zanna(w_hat_n_LF, lhs_hat_n_LF, w_hat_n_HF):
-
-    psi_hat_n_LF = get_psi_hat(w_hat_n_LF)
-    psi_hat_n_HF = get_psi_hat(w_hat_n_HF)
-    dPsi_n = np.fft.irfft2(psi_hat_n_HF - psi_hat_n_LF)
-    
-    w_n_LF = np.fft.irfft2(w_hat_n_LF)
-    lhs_n_LF = np.fft.irfft2(lhs_hat_n_LF)
-
-    dPsiF = simps(simps(dPsi_n*F, axis), axis)
-    denom = simps(simps(w_n_LF*lhs_n_LF, axis), axis)
-
-    return -mu*dPsiF/denom
-
 #compute the energy and enstrophy at t_n
 def compute_E_and_Z(w_hat_n, verbose=True):
     
@@ -518,8 +522,8 @@ mu = 1.0/(day*decay_time_mu)
 
 #start, end time (in days) + time step
 t = 250.0*day
-#t_end = t + 8.0*365*day
-t_end = 500.0*day
+t_end = t + 8.0*365*day
+#t_end = 251.0*day
 #t_data = 500.0*day
 t_data = t + 8.0*365.0*day 
 
@@ -542,9 +546,9 @@ tau_Z_max = 1.0
 
 state_store = False 
 restart = True
-store = False
-store_fig = True 
-plot = True
+store = True
+store_fig = False
+plot = False
 corr = False
 smooth = False
 eddy_forcing_type = 'binned'
@@ -576,7 +580,7 @@ store_ID = sim_ID + '_' + binning_type + '_' + sim_number
 QoI = ['z_n_HF', 'e_n_HF', 'z_n_UP', 'e_n_UP', \
        'z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF', 'v_n_LF', 'o_n_LF', \
        'sprime_n_LF', 'zprime_n_LF', \
-       'tau_E', 'tau_Z', 't']
+       'tau_E', 'tau_Z', 'r_tau_E', 'r_tau_Z', 't']
 
 #prediction data QoI
 #QoI = ['e_HF', 'z_HF', 'e_LF', 'z_LF', 'e_UP', 'z_UP', 'tau_E', 'tau_Z', 'rho', 't']
@@ -697,7 +701,7 @@ if eddy_forcing_type == 'binned':
         
         max_lag = np.max(lags[target])
         min_lag = np.min(lags[target])
-        j3[target] = min_lag*store_frame_rate
+        j3[target] = 0#min_lag*store_frame_rate
         
         print '***********************'
         print 'Parameters'
@@ -715,9 +719,9 @@ if eddy_forcing_type == 'binned':
 
             if covariates[target][i] == 'auto':
                 c_i[:, i] = h5f['e_n_HF'][0:-lags[target][i]] - h5f['e_n_LF'][0:-lags[target][i]]
-            elif covariates[target][i] == 'tau_E*sprime_n_LF':
+            elif covariates[target][i] == 'r_tau_E*sprime_n_LF':
                 c_i[:, i] = h5f['tau_E'][0:-lags[target][i]]*h5f['sprime_n_LF'][0:-lags[target][i]]
-            elif covariates[target][i] == 'tau_Z*zprime_n_LF':
+            elif covariates[target][i] == 'r_tau_Z*zprime_n_LF':
                 c_i[:, i] = h5f['tau_Z'][0:-lags[target][i]]*h5f['zprime_n_LF'][0:-lags[target][i]]
             else:
                 c_i[:, i] = h5f[covariates[target][i]][0:-lags[target][i]]
@@ -772,7 +776,7 @@ norm_factor_LF = 1.0/(3.0/(2.0*dt) - nu_LF*k_squared + mu)
 norm_factor_smooth = 1.0/(3.0/(2.0*dt) + tau2 - nu1*k_squared)
 
 j = 0; j2 = 0;  j4 = 0; idx = 0;
-T  = []; R_DE = []; R_DZ = []; Tau_E = []; DE = []; Tau_Z = []; DZ = []  
+T  = []; R_DE = []; R_DZ = []; Tau_E = []; DE = []; Tau_Z = []; DZ = []; R_tau_E = []; R_tau_Z = []  
 energy_HF = []; energy_LF = []; energy_UP = []
 enstrophy_HF = []; enstrophy_LF = []; enstrophy_UP = []
 
@@ -795,7 +799,7 @@ for n in range(n_steps):
     tau_E, tau_Z, dE, dZ = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
     
     #E & Z tracking eddy forcing
-    EF_hat_n_ortho_exact = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
+    EF_hat_n_ortho = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
 
     #tau_E, dE = get_data_driven_tau(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max)
     #tau_Z = 0.0
@@ -835,6 +839,8 @@ for n in range(n_steps):
                     r[target] = surrogate[target].get_r_ip1(c_i)[0]
             else:
                 r[target] = eval(target) 
+                r_tau_E = tau_E
+                r_tau_Z = tau_Z
 
             #covar = np.zeros([N**2, N_c])
             covar = np.zeros([1, N_c[target]])
@@ -851,7 +857,14 @@ for n in range(n_steps):
             j3[target] += 1
 
         #EF_hat = P_LF*np.fft.rfft2(r)
-        EF_hat = EF_hat_n_ortho_exact
+        
+        r_tau_E, r_tau_Z = get_surrogate_tau_src_EZ(w_hat_n_LF, r, tau_E_max, tau_Z_max)
+
+        #use the exact orthogonal-pattern eddy forcing
+        #EF_hat = EF_hat_n_ortho_exact
+
+        #use the surrogate orthogonal-pattern eddy forcing
+        EF_hat =  -r_tau_E*psi_hat_n_prime - r_tau_Z*w_hat_n_prime 
 
     elif eddy_forcing_type == 'tau':
         EF_hat = -tau_E*w_hat_n_LF
@@ -914,6 +927,8 @@ for n in range(n_steps):
             DE.append(dE)
             Tau_Z.append(tau_Z)
             DZ.append(dZ)
+            #R_tau_E.append(r_tau_E)
+            #R_tau_Z.append(r_tau_Z)
 
         EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
         EF = np.fft.irfft2(EF_hat)
@@ -934,8 +949,8 @@ for n in range(n_steps):
         energy_LF.append(E_LF); enstrophy_LF.append(Z_LF)
         energy_UP.append(E_UP); enstrophy_UP.append(Z_UP)
 
-        #drawnow(draw_stats)
-        drawnow(draw_2w)
+        drawnow(draw_stats)
+        #drawnow(draw_2w)
         
     #store samples to dict
     if j2 == store_frame_rate and store == True:
@@ -948,8 +963,8 @@ for n in range(n_steps):
         # training data #
         #################
     
-        e_np1_HF, z_np1_HF, _ = get_EZS(P_LF*w_hat_np1_HF)
-        e_np1_LF, z_np1_LF, _ = get_EZS(w_hat_np1_LF)
+        e_n_HF, z_n_HF, _ = get_EZS(P_LF*w_hat_n_HF)
+        e_n_LF, z_n_LF, _ = get_EZS(w_hat_n_LF)
 
         samples['e_n_HF'][idx] = e_n_HF     #actually said e_np1_HF & z_np1_HF before, regenerate training data?
         samples['z_n_HF'][idx] = z_n_HF
@@ -967,6 +982,8 @@ for n in range(n_steps):
         samples['zprime_n_LF'][idx] = zprime_n_LF
         samples['tau_E'][idx] = tau_E
         samples['tau_Z'][idx] = tau_Z
+        samples['r_tau_E'][idx] = r_tau_E
+        samples['r_tau_Z'][idx] = r_tau_Z
         
         ###################
         # prediction data #
