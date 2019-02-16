@@ -546,9 +546,9 @@ tau_Z_max = 1.0
 
 state_store = False 
 restart = True
-store = True
+store = False
 store_fig = False
-plot = False
+plot = True
 corr = False
 smooth = False
 eddy_forcing_type = 'binned'
