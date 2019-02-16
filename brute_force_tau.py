@@ -546,9 +546,9 @@ tau_Z_max = 1.0
 
 state_store = False 
 restart = True
-store = False
+store = True
 store_fig = False
-plot = True
+plot = False
 corr = False
 smooth = False
 eddy_forcing_type = 'binned'
@@ -733,7 +733,7 @@ if eddy_forcing_type == 'binned':
         
         #########################
         
-        N_bins = 100
+        N_bins = 10
 
         print 'Creating Binning object...'
         if binning_type == 'global':

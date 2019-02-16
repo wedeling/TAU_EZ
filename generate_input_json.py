@@ -10,7 +10,7 @@ target = ['dE', 'dZ']
 #covariates = [['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF'], ['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF']]
 covariates = [['r_tau_E*sprime_n_LF', 'r_tau_E*sprime_n_LF'], ['r_tau_Z*zprime_n_LF', 'r_tau_Z*zprime_n_LF']]
 
-lag = [[1, 1], [1, 1]]
+lag = [[1, 2], [1, 2]]
 
 N_surr = len(target)
 
