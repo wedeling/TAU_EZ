@@ -660,8 +660,9 @@ if eddy_forcing_type == 'binned':
     h5f = h5py.File(fname, 'r')
 
     print h5f.keys()
-    S_train = np.int(1.0*h5f['t'].size)
-    S_extrapolate =  h5f['t'].size - S_train
+    S_tot = h5f['t'].size
+    S_train = np.int(0.8*h5f['t'].size)
+    S_extrap = S_tot - S_train
 
     #####################################
     # read the inputs for the surrogate #
@@ -708,16 +709,16 @@ if eddy_forcing_type == 'binned':
         print 'Sim number =', sim_number
         print 'Target =', target
         print 'Covariates =', covariates[target]
-        print 'Excluding', S_extrapolate, ' points from training set' 
+        print 'Excluding', S_extrap, ' points from training set' 
         print 'Lags =', lags[target]
         print '***********************'
 
-        c_i = np.zeros([S_train - max_lag - S_extrapolate, N_c[target]])
+        c_i = np.zeros([S_train - max_lag, N_c[target]])
         #r = np.zeros([S_train - max_lag - S_extrapolate])
 
         for i in range(N_c[target]):
 
-            final_idx = lags[target][i] + S_extrapolate 
+            final_idx = lags[target][i] + S_extrap
 
             if covariates[target][i] == 'auto':
                 c_i[:, i] = h5f['e_n_HF'][0:-final_idx] - h5f['e_n_LF'][0:-final_idx]
@@ -729,9 +730,9 @@ if eddy_forcing_type == 'binned':
                 c_i[:, i] = h5f[covariates[target][i]][0:-final_idx]
 
         if target == 'dZ':
-            r = h5f['z_n_HF'][lags[target][i]:-S_extrapolate] - h5f['z_n_LF'][lags[target][i]:-S_extrapolate]
+            r = h5f['z_n_HF'][lags[target][i]:S_tot-S_extrap] - h5f['z_n_LF'][lags[target][i]:S_tot-S_extrap]
         elif target == 'dE':
-            r = h5f['e_n_HF'][lags[target][i]:-S_extrapolate] - h5f['e_n_LF'][lags[target][i]:-S_extrapolate]
+            r = h5f['e_n_HF'][lags[target][i]:S_tot-S_extrap] - h5f['e_n_LF'][lags[target][i]:S_tot-S_extrap]
         
         #########################
         
