@@ -78,9 +78,13 @@ for i in range(N_inputs):
         #ax4.plot(h5f['t'], h5f['rho'])
         ax5.plot(h5f['t'][:]/day, h5f['tau_E'],  label=r'$\tau_E$')
         ax5.plot(h5f['t'][:]/day, h5f['tau_Z'], '--', label=r'$\tau_Z$')
+        #ax5.plot(h5f['t'][:]/day, h5f['r_tau_E'],  label=r'$\widetilde{\tau_E}$')
+        #ax5.plot(h5f['t'][:]/day, h5f['r_tau_Z'], '--', label=r'$\widetilde{\tau_Z}$')
 
         print 'Mean tau_E =', np.mean(h5f['tau_E'])
         print 'Mean tau_Z =', np.mean(h5f['tau_Z'])
+        #print 'Mean r_tau_E =', np.mean(h5f['r_tau_E'])
+        #print 'Mean r_tau_Z =', np.mean(h5f['r_tau_Z'])
 
         if i == 0:
             ax1.plot(x_E_HF, pdf_E_HF, '--k', label=r'$\mathrm{reference}$')

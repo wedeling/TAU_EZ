@@ -546,9 +546,9 @@ tau_Z_max = 1.0
 
 state_store = False 
 restart = True
-store = True
+store = False
 store_fig = False
-plot = False
+plot = True
 corr = False
 smooth = False
 eddy_forcing_type = 'binned'
@@ -660,13 +660,12 @@ if eddy_forcing_type == 'binned':
     h5f = h5py.File(fname, 'r')
 
     print h5f.keys()
-    S_train = h5f['t'].size
-    S_extrapolate = 0 
+    S_train = np.int(1.0*h5f['t'].size)
+    S_extrapolate =  h5f['t'].size - S_train
 
     #####################################
     # read the inputs for the surrogate #
     #####################################
-    #N_surr = 0
     fpath = sys.argv[2]
     fp = open(fpath, 'r')
     N_surr = int(fp.readline())
@@ -709,6 +708,7 @@ if eddy_forcing_type == 'binned':
         print 'Sim number =', sim_number
         print 'Target =', target
         print 'Covariates =', covariates[target]
+        print 'Excluding', S_extrapolate, ' points from training set' 
         print 'Lags =', lags[target]
         print '***********************'
 
@@ -717,19 +717,21 @@ if eddy_forcing_type == 'binned':
 
         for i in range(N_c[target]):
 
+            final_idx = lags[target][i] + S_extrapolate 
+
             if covariates[target][i] == 'auto':
-                c_i[:, i] = h5f['e_n_HF'][0:-lags[target][i]] - h5f['e_n_LF'][0:-lags[target][i]]
+                c_i[:, i] = h5f['e_n_HF'][0:-final_idx] - h5f['e_n_LF'][0:-final_idx]
             elif covariates[target][i] == 'r_tau_E*sprime_n_LF':
-                c_i[:, i] = h5f['tau_E'][0:-lags[target][i]]*h5f['sprime_n_LF'][0:-lags[target][i]]
+                c_i[:, i] = h5f['tau_E'][0:-final_idx]*h5f['sprime_n_LF'][0:-final_idx]
             elif covariates[target][i] == 'r_tau_Z*zprime_n_LF':
-                c_i[:, i] = h5f['tau_Z'][0:-lags[target][i]]*h5f['zprime_n_LF'][0:-lags[target][i]]
+                c_i[:, i] = h5f['tau_Z'][0:-final_idx]*h5f['zprime_n_LF'][0:-final_idx]
             else:
-                c_i[:, i] = h5f[covariates[target][i]][0:-lags[target][i]]
+                c_i[:, i] = h5f[covariates[target][i]][0:-final_idx]
 
         if target == 'dZ':
-            r = h5f['z_n_HF'][lags[target][i]:] - h5f['z_n_LF'][lags[target][i]:]
+            r = h5f['z_n_HF'][lags[target][i]:-S_extrapolate] - h5f['z_n_LF'][lags[target][i]:-S_extrapolate]
         elif target == 'dE':
-            r = h5f['e_n_HF'][lags[target][i]:] - h5f['e_n_LF'][lags[target][i]:]
+            r = h5f['e_n_HF'][lags[target][i]:-S_extrapolate] - h5f['e_n_LF'][lags[target][i]:-S_extrapolate]
         
         #########################
         
@@ -747,7 +749,7 @@ if eddy_forcing_type == 'binned':
         print 'done'
 
         surrogate[target].print_bin_info()
-
+"""
 #############################
 # SPECIFY CORRELATION PARAM #
 #############################
@@ -920,7 +922,6 @@ for n in range(n_steps):
 
         T.append(t/day)
         if eddy_forcing_type == 'binned':
-            print r
             R_DE.append(r['dE'])
             R_DZ.append(r['dZ'])
             Tau_E.append(tau_E)
@@ -1140,5 +1141,5 @@ if store_fig == True and plot == True:
     cPickle.dump(ax, open(HOME + '/figures/fig_' + str(uuid.uuid1())[0:8] + '.pickle', 'w'))
 
 ####################################
-
+"""
 plt.show()
