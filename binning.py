@@ -508,6 +508,7 @@ class Binning:
             
     def print_bin_info(self):
         print '-------------------------------'
+        print 'Total number of samples= ', self.r_ip1.size
         print 'Total number of bins = ', self.N_bins**self.N_c
         print 'Total number of non-empty bins = ', self.binnumbers_nonempty.size
         print 'Percentage filled = ', np.double(self.binnumbers_nonempty.size)/self.N_bins**self.N_c*100., ' %'

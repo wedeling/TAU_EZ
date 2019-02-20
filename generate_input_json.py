@@ -4,14 +4,14 @@ import os
 
 HOME = os.path.abspath(os.path.dirname(__file__))
 
-fname = 'Esrc_zeu_1lag'
+fname = 'test'
 target = ['dE', 'dZ']
-#covariates = [['r_tau_E*sprime_n_LF', 'r_tau_Z*zprime_n_LF'], ['r_tau_Z*zprime_n_LF', 'r_tau_E*sprime_n_LF']]
+covariates = [['u_n_LF', 'auto'], ['u_n_LF', 'auto']]
 #covariates = [['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF'], ['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF']]
-covariates = [['r_tau_E*sprime_n_LF', 'z_n_LF', 'e_n_LF', 'u_n_LF'], ['r_tau_Z*zprime_n_LF', 'z_n_LF', 'e_n_LF', 'u_n_LF']]
+#covariates = [['r_tau_E*sprime_n_LF', 'z_n_LF', 'e_n_LF', 'u_n_LF'], ['r_tau_Z*zprime_n_LF', 'z_n_LF', 'e_n_LF', 'u_n_LF']]
 #covariates = [['r_tau_E*sprime_n_LF', 'r_tau_E*sprime_n_LF'], ['r_tau_Z*zprime_n_LF', 'r_tau_Z*zprime_n_LF']]
 
-lag = [[1, 1, 1, 1], [1, 1, 1, 1]]
+lag = [[1, 1], [1, 1]]
 
 N_surr = len(target)
 

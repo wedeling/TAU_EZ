@@ -171,7 +171,7 @@ def draw_2w():
     plt.xlabel(r'$t\;[days]$', fontsize=14)
     #plt.plot(T, DE, label=r'$\Delta E$')
     #plt.plot(T, R_DE, '--' , label=r'$\widetilde{\Delta E}$')
-    plt.plot(T, Tau_E, label=r'$\tau E$')
+    #plt.plot(T, Tau_E, label=r'$\tau E$')
     plt.plot(T, R_tau_E, '--' , label=r'$\widetilde{\tau E}$')
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     plt.legend(loc=0, fontsize=14)
@@ -179,7 +179,7 @@ def draw_2w():
     plt.xlabel(r'$t\;[days]$', fontsize=14)
     #plt.plot(T, DZ, label=r'$\Delta Z$')
     #plt.plot(T, R_DZ, '--', label=r'$\widetilde{\Delta Z}$')
-    plt.plot(T, Tau_Z, label=r'$\tau Z$')
+    #plt.plot(T, Tau_Z, label=r'$\tau Z$')
     plt.plot(T, R_tau_Z, '--', label=r'$\widetilde{\tau Z}$')
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     plt.legend(loc=0, fontsize=14)
@@ -661,7 +661,7 @@ if eddy_forcing_type == 'binned':
 
     print h5f.keys()
     S_tot = h5f['t'].size
-    S_train = np.int(0.8*h5f['t'].size)
+    S_train = np.int(1.0*h5f['t'].size)
     S_extrap = S_tot - S_train
 
     #####################################
@@ -713,26 +713,27 @@ if eddy_forcing_type == 'binned':
         print 'Lags =', lags[target]
         print '***********************'
 
+        #covariates
         c_i = np.zeros([S_train - max_lag, N_c[target]])
-        #r = np.zeros([S_train - max_lag - S_extrapolate])
+        i1 = max_lag; i2 = S_tot - S_extrap
 
         for i in range(N_c[target]):
 
-            final_idx = lags[target][i] + S_extrap
+            lag_i = lags[target][i] 
 
             if covariates[target][i] == 'auto':
-                c_i[:, i] = h5f['e_n_HF'][0:-final_idx] - h5f['e_n_LF'][0:-final_idx]
+                c_i[:, i] = h5f[target[i]][i1-lag_i:i2-lag_i] - h5f[target[i]][i1-lag_i:i2-lag_i]
             elif covariates[target][i] == 'r_tau_E*sprime_n_LF':
-                c_i[:, i] = h5f['tau_E'][0:-final_idx]*h5f['sprime_n_LF'][0:-final_idx]
+                c_i[:, i] = h5f['tau_E'][i1-lag_i:i2-lag_i]*h5f['sprime_n_LF'][i1-lag_i:i2-lag_i]
             elif covariates[target][i] == 'r_tau_Z*zprime_n_LF':
-                c_i[:, i] = h5f['tau_Z'][0:-final_idx]*h5f['zprime_n_LF'][0:-final_idx]
+                c_i[:, i] = h5f['tau_Z'][i1-lag_i:i2-lag_i]*h5f['zprime_n_LF'][i1-lag_i:i2-lag_i]
             else:
-                c_i[:, i] = h5f[covariates[target][i]][0:-final_idx]
+                c_i[:, i] = h5f[covariates[target][i]][i1-lag_i:i2-lag_i]
 
         if target == 'dZ':
-            r = h5f['z_n_HF'][lags[target][i]:S_tot-S_extrap] - h5f['z_n_LF'][lags[target][i]:S_tot-S_extrap]
+            r = h5f['z_n_HF'][i1:i2] - h5f['z_n_LF'][i1:i2]
         elif target == 'dE':
-            r = h5f['e_n_HF'][lags[target][i]:S_tot-S_extrap] - h5f['e_n_LF'][lags[target][i]:S_tot-S_extrap]
+            r = h5f['e_n_HF'][i1:i2] - h5f['e_n_LF'][i1:i2]
         
         #########################
         
@@ -750,7 +751,7 @@ if eddy_forcing_type == 'binned':
         print 'done'
 
         surrogate[target].print_bin_info()
-"""
+
 #############################
 # SPECIFY CORRELATION PARAM #
 #############################
@@ -833,9 +834,9 @@ for n in range(n_steps):
 
         for target in surrogate.keys():
 
-            if n >= max_lag*store_frame_rate:
+            if n >= np.max(lags[target])*store_frame_rate:
                 
-                if j3[target] >= min_lag*store_frame_rate:
+                if j3[target] >= np.min(lags[target])*store_frame_rate:
                     j3[target] = 0
 
                     c_i = surrogate[target].get_covar(lags[target]*store_frame_rate)
@@ -884,7 +885,7 @@ for n in range(n_steps):
     #########################
     if smooth == True:
 
-        if n < max_lag*store_frame_rate:
+        if n < np.max(lags[target])*store_frame_rate:
             EF_hat_n_smooth = EF_hat
             EF_hat_nm1_smooth = EF_hat
             VgradEF_hat_n_smooth = compute_VgradEF_hat(w_hat_n_LF, EF_hat_n_smooth)
@@ -929,8 +930,8 @@ for n in range(n_steps):
             DE.append(dE)
             Tau_Z.append(tau_Z)
             DZ.append(dZ)
-            #R_tau_E.append(r_tau_E)
-            #R_tau_Z.append(r_tau_Z)
+            R_tau_E.append(r_tau_E)
+            R_tau_Z.append(r_tau_Z)
 
         EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
         EF = np.fft.irfft2(EF_hat)
@@ -951,8 +952,8 @@ for n in range(n_steps):
         energy_LF.append(E_LF); enstrophy_LF.append(Z_LF)
         energy_UP.append(E_UP); enstrophy_UP.append(Z_UP)
 
-        drawnow(draw_stats)
-        #drawnow(draw_2w)
+        #drawnow(draw_stats)
+        drawnow(draw_2w)
         
     #store samples to dict
     if j2 == store_frame_rate and store == True:
@@ -1142,5 +1143,5 @@ if store_fig == True and plot == True:
     cPickle.dump(ax, open(HOME + '/figures/fig_' + str(uuid.uuid1())[0:8] + '.pickle', 'w'))
 
 ####################################
-"""
+
 plt.show()
