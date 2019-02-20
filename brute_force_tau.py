@@ -721,8 +721,10 @@ if eddy_forcing_type == 'binned':
 
             lag_i = lags[target][i] 
 
-            if covariates[target][i] == 'auto':
-                c_i[:, i] = h5f[target[i]][i1-lag_i:i2-lag_i] - h5f[target[i]][i1-lag_i:i2-lag_i]
+            if covariates[target][i] == 'auto' and target == 'dE':
+                c_i[:, i] = h5f['e_n_HF'][i1-lag_i:i2-lag_i] - h5f['e_n_LF'][i1-lag_i:i2-lag_i]
+            elif covariates[target][i] == 'auto' and target == 'dZ':
+                c_i[:, i] = h5f['z_n_HF'][i1-lag_i:i2-lag_i] - h5f['z_n_LF'][i1-lag_i:i2-lag_i]
             elif covariates[target][i] == 'r_tau_E*sprime_n_LF':
                 c_i[:, i] = h5f['tau_E'][i1-lag_i:i2-lag_i]*h5f['sprime_n_LF'][i1-lag_i:i2-lag_i]
             elif covariates[target][i] == 'r_tau_Z*zprime_n_LF':
