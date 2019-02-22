@@ -12,18 +12,14 @@ import h5py
 from itertools import product, cycle, combinations
 from scipy import stats
 import sys
-
+import json
 
 HOME = os.path.abspath(os.path.dirname(__file__))
 
 Omega = 7.292*10**-5
 day = 24*60**2*Omega
-t_end = 500.0*day
-t_end = (250.0 + 10.0*365)*day
-
-sim_ID = 'RST_TEST5'
-binning_type = 'global'
-run = ''
+sim_ID = 'tau_EZ_PE_HF_global'
+t_end = (250.0 + 8*365.)*day 
 
 N_inputs = 0
 try:
@@ -53,9 +49,19 @@ for i in range(N_inputs):
 
     mark = markers.next()
 
-    fname = HOME + '/samples/' + sys.argv[i+1]
+    #####################################
+    # read the inputs for the surrogate #
+    #####################################
+    fpath = sys.argv[i+1]
+    fp = open('./inputs/' + fpath, 'r')
+    N_surr = int(fp.readline())
+    inputs = []
+    
+    for j in range(N_surr):
+        inputs.append(json.loads(fp.readline()))
 
-    print fname
+    fname = HOME + '/samples/' + sim_ID + '_' + fpath[0:-5] + '_t_' + str(np.around(t_end/day,1)) + '.hdf5'
+
     print 'Loading samples ', fname
 
     try:
@@ -71,8 +77,8 @@ for i in range(N_inputs):
         x_Z_LF, pdf_Z_LF = get_pde(h5f['z_n_LF'])
         x_Z_UP, pdf_Z_UP = get_pde(h5f['z_n_UP'])
 
-        ax1.plot(x_E_LF, pdf_E_LF, mark, label=lbl.next())
-        ax2.plot(x_Z_LF, pdf_Z_LF, mark, label=lbl.next())
+        ax1.plot(x_E_LF, pdf_E_LF, mark, label=lbl.next() + r'$,\;\alpha = ' + str(inputs[0]['extrap_ratio'])+'$')
+        ax2.plot(x_Z_LF, pdf_Z_LF, mark, label=lbl.next() + r'$,\;\alpha = ' + str(inputs[0]['extrap_ratio'])+'$')
 
         ax3.plot(h5f['t'], h5f['e_n_LF'])
         #ax4.plot(h5f['t'], h5f['rho'])
@@ -108,6 +114,10 @@ handles,labels = ax1.get_legend_handles_labels()
 #Jac_LF reorder
 #handles = [handles[0], handles[2], handles[3], handles[4], handles[1]]
 #labels = [labels[0], labels[2], labels[3], labels[4], labels[1]]
+
+
+handles = [handles[1], handles[2], handles[0], handles[3], handles[4]]
+labels = [labels[1], labels[2], labels[0], labels[3], labels[4]]
 
 ax1.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 ax2.ticklabel_format(style='sci', axis='x', scilimits=(0,0))

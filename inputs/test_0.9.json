@@ -1,3 +1,0 @@
-2
-{"extrap_ratio": 0.9, "N_c": 1, "target": "dE", "lag": [1], "covariates": ["e_n_LF"]}
-{"extrap_ratio": 0.9, "N_c": 1, "target": "dZ", "lag": [1], "covariates": ["z_n_LF"]}
