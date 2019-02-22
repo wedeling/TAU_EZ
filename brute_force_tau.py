@@ -546,9 +546,9 @@ tau_Z_max = 1.0
 
 state_store = False 
 restart = True
-store = False
+store = True
 store_fig = False
-plot = True
+plot = False
 corr = False
 smooth = False
 eddy_forcing_type = 'binned'
@@ -660,9 +660,6 @@ if eddy_forcing_type == 'binned':
     h5f = h5py.File(fname, 'r')
 
     print h5f.keys()
-    S_tot = h5f['t'].size
-    S_train = np.int(1.0*h5f['t'].size)
-    S_extrap = S_tot - S_train
 
     #####################################
     # read the inputs for the surrogate #
@@ -693,6 +690,12 @@ if eddy_forcing_type == 'binned':
         N_c[target] = param['N_c'] 
         covariates[target] = param['covariates']
         lag = param['lag']
+        extrap_ratio = param['extrap_ratio']
+
+        #reduce training data if extrap_ratio < 1 (to test extrapolative capability of surrogate)
+        S_tot = h5f['t'].size
+        S_train = np.int(extrap_ratio*h5f['t'].size)
+        S_extrap = S_tot - S_train
 
         #spatially constant lag per covariate
         lags[target] = np.zeros(N_c[target]).astype('int')
@@ -745,7 +748,7 @@ if eddy_forcing_type == 'binned':
         if binning_type == 'global':
             from binning import *
             surrogate[target] = Binning(c_i, r.flatten(), 1, N_bins, lags = lags[target], store_frame_rate = store_frame_rate, verbose=True)
-            #surrogate[target].plot_samples_per_bin(10)
+            #surrogate[target].plot_samples_per_bin()
             #if N_c == 1:
             #    surrogate[target].compute_surrogate_jump_probabilities(plot = True)
             #    surrogate[target].compute_jump_probabilities()

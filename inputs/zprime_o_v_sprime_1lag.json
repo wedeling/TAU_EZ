@@ -1,3 +1,0 @@
-2
-{"N_c": 4, "target": "dE", "lag": [1, 1, 1, 1], "covariates": ["zprime_n_LF", "o_n_LF", "v_n_LF", "sprime_n_LF"]}
-{"N_c": 4, "target": "dZ", "lag": [1, 1, 1, 1], "covariates": ["zprime_n_LF", "o_n_LF", "v_n_LF", "sprime_n_LF"]}
