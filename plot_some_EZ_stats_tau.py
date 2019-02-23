@@ -77,8 +77,8 @@ for i in range(N_inputs):
         x_Z_LF, pdf_Z_LF = get_pde(h5f['z_n_LF'])
         x_Z_UP, pdf_Z_UP = get_pde(h5f['z_n_UP'])
 
-        ax1.plot(x_E_LF, pdf_E_LF, mark, label=lbl.next() + r'$,\;\alpha = ' + str(inputs[0]['extrap_ratio'])+'$')
-        ax2.plot(x_Z_LF, pdf_Z_LF, mark, label=lbl.next() + r'$,\;\alpha = ' + str(inputs[0]['extrap_ratio'])+'$')
+        ax1.plot(x_E_LF, pdf_E_LF, mark, label=lbl.next() + r'$,\;\alpha = ' + str(inputs[0]['extrap_ratio'])+'$', alpha=0.5)
+        ax2.plot(x_Z_LF, pdf_Z_LF, mark, label=lbl.next() + r'$,\;\alpha = ' + str(inputs[0]['extrap_ratio'])+'$', alpha=0.5)
 
         ax3.plot(h5f['t'], h5f['e_n_LF'])
         #ax4.plot(h5f['t'], h5f['rho'])
@@ -115,9 +115,8 @@ handles,labels = ax1.get_legend_handles_labels()
 #handles = [handles[0], handles[2], handles[3], handles[4], handles[1]]
 #labels = [labels[0], labels[2], labels[3], labels[4], labels[1]]
 
-
-handles = [handles[1], handles[2], handles[0], handles[3], handles[4]]
-labels = [labels[1], labels[2], labels[0], labels[3], labels[4]]
+#handles = [handles[1], handles[2], handles[0], handles[3], handles[4], handles[5], handles[6]]
+#labels = [labels[1], labels[2], labels[0], labels[3], labels[4], labels[5], labels[6]]
 
 ax1.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 ax2.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
