@@ -157,6 +157,41 @@ class Binning:
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
                 
         return binnumbers_i
+
+    def fill_in_blanks(self):
+        
+        bins_padded = []
+        
+        #mid points of all possible bins, including ghost bins
+        for i in range(self.N_c):
+            dx1 = self.bins[i][1] - self.bins[i][0]
+            dx2 = self.bins[i][-1] - self.bins[i][-2]
+            
+            #pad the beginning and end of current 1D bin with extrapolated values
+            bin_pad = np.pad(self.bins[i], (1,1), 'constant', constant_values=(self.bins[i][0]-dx1, self.bins[i][-1]+dx2))    
+            bins_padded.append(bin_pad)
+        
+        #compute the midpoints of the padded bins
+        x_mid_pad = [0.5*(bins_padded[i][1:] + bins_padded[i][0:-1]) for i in range(self.N_c)]
+        self.x_mid_pad_tensor = np.array(list(product(*x_mid_pad)))
+        
+        #total number bins
+        self.max_binnumber = self.x_mid_pad_tensor.shape[0]
+        
+        mapping = np.zeros(self.max_binnumber).astype('int')
+        
+        for i in range(self.max_binnumber):
+            
+            #bin is nonempty, just use current idx
+            if np.in1d(i, self.unique_binnumbers) == True:
+                mapping[i] = i
+            #bin is empty, find nearest non-empty bin
+            else:
+                binnumbers_i = np.array([i])
+                self.check_outliers(binnumbers_i, self.x_mid_pad_tensor[i].reshape([1, self.N_c]))
+                mapping[i] = binnumbers_i[0]
+            
+        self.mapping = mapping
        
     #the data-driven model for the unresolved scales
     #Given c_i return r at time i+1 (r_ip1)
@@ -175,7 +210,7 @@ class Binning:
         #random integers between 0 and max bin count for each index in 
         #binnumbers_i    
         I = np.floor(self.count[x_idx].reshape([self.N**2, 1])*np.random.rand(self.N**2, n_mc)).astype('int')
-    
+        
         #the correct offset for the 1D array idx_of_bin
         start = self.offset[binnumbers_i]
     
@@ -555,6 +590,6 @@ def std_per_bin(x):
 
 import numpy as np
 from scipy import stats
-from itertools import chain
+from itertools import chain, product
 import matplotlib.pyplot as plt
 import itertools

@@ -4,17 +4,17 @@ import os
 
 HOME = os.path.abspath(os.path.dirname(__file__))
 
-fname = 'zeus_1lag_extrap0.2'
-target = ['dE', 'dZ']
-covariates = [['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF'], ['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF']]
-#covariates = [['e_n_LF'], ['z_n_LF']]
+fname = 'test'
+target = ['dE']
+#covariates = [['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF'], ['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF']]
+covariates = [['e_n_LF', 'z_n_LF']]
 #covariates = [['auto', 'z_n_LF', 'e_n_LF', 'u_n_LF'], ['auto', 'z_n_LF', 'e_n_LF', 'u_n_LF']]
 #covariates = [['r_tau_E*sprime_n_LF', 'z_n_LF', 'e_n_LF', 'u_n_LF'], ['r_tau_Z*zprime_n_LF', 'z_n_LF', 'e_n_LF', 'u_n_LF']]
 #covariates = [['r_tau_E*sprime_n_LF', 'r_tau_E*sprime_n_LF'], ['r_tau_Z*zprime_n_LF', 'r_tau_Z*zprime_n_LF']]
 
-lag = [[1, 1, 1, 1], [1, 1, 1, 1]]
+lag = [[1, 1], [1, 1]]
 
-extrap_ratio = [0.2, 0.2]
+extrap_ratio = [1.0, 1.0]
 
 N_surr = len(target)
 
