@@ -321,9 +321,9 @@ tau_Z_max = 1.0
 #flags 
 state_store = False     #store the state at the end
 restart = True          #restart from prev state
-store = True            #store data
+store = False           #store data
 store_fig = False       #store figure object
-plot = False            #plot results while running, requires drawnow package
+plot = True             #plot results while running, requires drawnow package
 corr = False            #compute and store correlations
 
 eddy_forcing_type = 'binned'    #which eddy forcing to use
