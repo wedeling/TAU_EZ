@@ -128,24 +128,25 @@ for j in range(N_surr):
 
 surrogate[target].fill_in_blanks()
 surrogate[target].plot_2D_binning_object()
+print '--------------------'
+
+ax = plt.gca()
 
 #plot non empty midpoints
 #ax.plot(surrogate[target].midpoints[:,0], surrogate[target].midpoints[:,1], 'g+')
 
 #specify a deliberate outlier
 c_i = np.array([0.000413, 0.0109]).reshape([1, 2])
-#ax.plot(c_i[0][0], c_i[0][1], 'r+')
+c_i = np.array([0.000413, 0.109]).reshape([1, 2])
+ax.plot(c_i[0][0], c_i[0][1], 'r+')
 
 #evaluate surrogate at outlier
 surrogate[target].get_r_ip1(c_i)
 
-check = 130
-x_idx_check = np.unravel_index(check, [len(b) + 1 for b in surrogate[target].bins])
-x_idx_check = [x_idx_check[i] - 1 for i in range(surrogate[target].N_c)]
+#check = 130
+#x_idx_check = np.unravel_index(check, [len(b) + 1 for b in surrogate[target].bins])
+#x_idx_check = [x_idx_check[i] - 1 for i in range(surrogate[target].N_c)]
 #ax.plot(x_mid[0][x_idx_check[0]], x_mid[1][x_idx_check[1]], 'ro')
-
-ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 
 #plt.axis('equal')
 plt.tight_layout()

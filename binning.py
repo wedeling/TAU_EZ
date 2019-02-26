@@ -158,6 +158,8 @@ class Binning:
                 
         return binnumbers_i
 
+    #create an apriori mapping between every possible bin and the nearest 
+    #non-empty bin. Non-empty bins will link to themselves.
     def fill_in_blanks(self):
         
         bins_padded = []
@@ -193,6 +195,8 @@ class Binning:
             
         self.mapping = mapping
         
+    #visual representation of a 2D binning object. Also shows the mapping
+    #between empty to nearest non-empty bins.
     def plot_2D_binning_object(self):
 
         if self.N_c != 2:
@@ -209,6 +213,7 @@ class Binning:
        
         ax.plot(self.x_mid_pad_tensor[:,0], self.x_mid_pad_tensor[:,1], 'g+')
 
+        #plot the mapping
         for i in range(self.max_binnumber):
             ax.plot([self.x_mid_pad_tensor[i][0], self.x_mid_pad_tensor[self.mapping[i]][0]], \
                     [self.x_mid_pad_tensor[i][1], self.x_mid_pad_tensor[self.mapping[i]][1]], 'b', alpha=0.4)
@@ -225,15 +230,19 @@ class Binning:
         #find in which bins the c_i samples fall
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
         
-        #corrects binnumbers_i if outliers are found
-        self.check_outliers(binnumbers_i, c_i)
+        #dynamically corrects binnumbers_i if outliers are found
+        #self.check_outliers(binnumbers_i, c_i)
+
+        #static correction for outliers, using precomputed mapping array
+        binnumbers_i = self.mapping[binnumbers_i]
+        
+        #self.check_outliers(binnumbers_i, c_i)
 
         #convert 1D binnumbers_i to equivalent ND indices
         x_idx = np.unravel_index(binnumbers_i, [len(b) + 1 for b in self.bins])
         x_idx = [x_idx[i] - 1 for i in range(self.N_c)]
         
-        #random integers between 0 and max bin count for each index in 
-        #binnumbers_i    
+        #random integers between 0 and max bin count for each index in binnumbers_i    
         I = np.floor(self.count[x_idx].reshape([self.N**2, 1])*np.random.rand(self.N**2, n_mc)).astype('int')
         
         #the correct offset for the 1D array idx_of_bin
@@ -254,8 +263,11 @@ class Binning:
         #find in which bins the c_i samples fall
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
         
-        #corrects binnumbers_i if outliers are found
-        self.check_outliers(binnumbers_i, c_i)    
+        #dynamically corrects binnumbers_i if outliers are found
+        #self.check_outliers(binnumbers_i, c_i)
+
+        #static correction for outliers, using precomputed mapping array
+        binnumbers_i = self.mapping[binnumbers_i]
     
         #convert 1D binnumbers_i to equivalent ND indices
         x_idx = np.unravel_index(binnumbers_i, [len(b) + 1 for b in self.bins])
@@ -269,8 +281,11 @@ class Binning:
         #find in which bins the c_i samples fall
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
         
-        #corrects binnumbers_i if outliers are found
-        self.check_outliers(binnumbers_i, c_i)    
+        #dynamically corrects binnumbers_i if outliers are found
+        #self.check_outliers(binnumbers_i, c_i)
+
+        #static correction for outliers, using precomputed mapping array
+        binnumbers_i = self.mapping[binnumbers_i]
   
         #the selected jump pmfs for each spatial point
         pmfs = self.jump_pmfs[binnumbers_i]
