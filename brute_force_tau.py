@@ -27,92 +27,6 @@ def compute_VgradW_hat(w_hat_n, P):
     
     return VgradW_hat_n
 
-#compute the Jacobian of the smoothing PDE
-def compute_VgradEF_hat(w_hat_n, EF_hat_n):
-    
-    #compute streamfunction
-    psi_hat_n = w_hat_n/k_squared_no_zero
-    psi_hat_n[0,0] = 0.0
-    
-    #compute jacobian in physical space
-    u_n = np.fft.irfft2(-ky*psi_hat_n)
-    EF_x_n = np.fft.irfft2(kx*EF_hat_n)
-
-    v_n = np.fft.irfft2(kx*psi_hat_n)
-    EF_y_n = np.fft.irfft2(ky*EF_hat_n)
-    
-    VgradEF_n = u_n*EF_x_n + v_n*EF_y_n
-    
-    #return to spectral space
-    VgradEF_hat_n = np.fft.rfft2(VgradEF_n)
-    
-    VgradEF_hat_n *= P_LF
-    
-    return VgradEF_hat_n
-
-#pseudo-spectral technique to solve for Fourier coefs of BCD components
-def compute_MN_hat(w_hat_HF, w_hat_LF):
-    
-    #compute streamfunctions
-    psi_hat_HF = w_hat_HF/k_squared_no_zero
-    psi_hat_HF[0,0] = 0.0
-    psi_hat_LF = w_hat_LF/k_squared_no_zero
-    psi_hat_LF[0,0] = 0.0
-    
-    #compute full and projected velocities
-    u_HF = np.fft.irfft2(-ky*psi_hat_HF)
-    u_LF = np.fft.irfft2(-ky*psi_hat_LF)
-    v_HF = np.fft.irfft2(kx*psi_hat_HF)
-    v_LF = np.fft.irfft2(kx*psi_hat_LF)
-    
-    """
-    #compute subgrid velocities
-    du = u_HF - u_LF
-    dv = v_HF - v_LF
-    
-    #return resolved part of the RST components (\bar{u_iu_j})
-    M_hat = P_LF*np.fft.rfft2(u_LF*du - v_LF*dv + 0.5*(du*du - dv*dv))
-    N_hat = P_LF*np.fft.rfft2(u_LF*dv + v_LF*du + du*dv)
-    """
-    
-    M_HF = 0.5*(u_HF**2 - v_HF**2)
-    M_LF = 0.5*(u_LF**2 - v_LF**2)
-    N_HF = u_HF*v_HF
-    N_LF = u_LF*v_LF
-    
-    dM_hat = P_LF*np.fft.rfft2(M_HF - M_LF)
-    dN_hat = P_LF*np.fft.rfft2(N_HF - N_LF)
-    M_LF_hat = P_LF*np.fft.rfft2(M_LF)
-    N_LF_hat = P_LF*np.fft.rfft2(N_LF)
-    M_HF_hat = P_LF*np.fft.rfft2(M_HF)
-    N_HF_hat = P_LF*np.fft.rfft2(N_HF)
-    
-    return dM_hat, dN_hat, M_LF_hat, N_LF_hat, M_HF_hat, N_HF_hat
-
-#pseudo-spectral technique to solve for Fourier coefs of RST components
-def compute_rst_hat(w_hat):
-    
-    #compute streamfunction
-    psi_hat = w_hat/k_squared_no_zero
-    psi_hat[0,0] = 0.0
-    
-    #compute full and projected velocities
-    u = np.fft.irfft2(-ky*psi_hat)
-    u_bar = np.fft.irfft2(-P_LF*ky*psi_hat)
-    v = np.fft.irfft2(kx*psi_hat)
-    v_bar = np.fft.irfft2(P_LF*kx*psi_hat)
-    
-    #compute subgrid velocities
-    u_prime = u - u_bar
-    v_prime = v - v_bar
-    
-    #return resolved part of the RST components (\bar{u_iu_j})
-    uu_hat = P_LF*np.fft.rfft2(u_prime*u_prime)
-    uv_hat = P_LF*np.fft.rfft2(u_prime*v_prime)
-    vv_hat = P_LF*np.fft.rfft2(v_prime*v_prime)
-
-    return uu_hat, uv_hat, vv_hat
-
 #get Fourier coefficient of the vorticity at next (n+1) time step
 def get_w_hat_np1(w_hat_n, w_hat_nm1, VgradW_hat_nm1, P, norm_factor, sgs_hat = 0.0):
     
@@ -157,15 +71,6 @@ def store_samples_hdf5():
         
     h5f.close()    
 
-def draw_w():
-    plt.subplot(111, xlabel=r'$t\;[days]$', ylabel=r'$\rho\left(r_{i+1}, \mathcal{C}_i\right)$')
-
-    for c in range(C):
-        plt.plot(T, rho[c])
-        #plt.plot(test)
-
-    plt.tight_layout()
-
 def draw_2w():
     plt.subplot(121)
     plt.xlabel(r'$t\;[days]$', fontsize=14)
@@ -200,19 +105,11 @@ def draw_stats():
     plt.legend(loc=0)
     plt.tight_layout()
 
-def draw_3w():
-    plt.subplot(131, aspect='equal', title=r'$Q_1\; ' + r't = '+ str(np.around(t/day,2)) + '\;[days]$')
-    plt.contourf(x, y, w_np1_HF, 100)
-    plt.subplot(132, aspect='equal', title=r'$Q_2$')
-    plt.contourf(x, y, w_np1_LF, 100)    
-    plt.subplot(133, aspect='equal', title=r'$Q_3$')
-    plt.contourf(x, y, dPsi_n, 100) 
-    plt.tight_layout()
-
 #compute the spatial correlation coeffient at a given time
 def spatial_corr_coef(X, Y):
     return np.mean((X - np.mean(X))*(Y - np.mean(Y)))/(np.std(X)*np.std(Y))
 
+#return the fourier coefs of the stream function
 def get_psi_hat(w_hat_n):
 
     psi_hat_n = w_hat_n/k_squared_no_zero
