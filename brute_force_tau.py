@@ -297,6 +297,7 @@ mu = 1.0/(day*decay_time_mu)
 #start, end time, end time of data (training period), time step
 t = 250.0*day
 t_end = t + 8.0*365*day
+t_end = t + 8.0*365*day
 t_data = t + 8.0*365.0*day 
 dt = 0.01
 n_steps = np.ceil((t_end-t)/dt).astype('int')
@@ -321,9 +322,9 @@ tau_Z_max = 1.0
 #flags 
 state_store = False     #store the state at the end
 restart = True          #restart from prev state
-store = False           #store data
+store = True            #store data
 store_fig = False       #store figure object
-plot = True             #plot results while running, requires drawnow package
+plot = False            #plot results while running, requires drawnow package
 corr = False            #compute and store correlations
 
 eddy_forcing_type = 'binned'    #which eddy forcing to use
@@ -542,7 +543,6 @@ if corr == True:
 #constant factor that appears in AB/BDI2 time stepping scheme   
 norm_factor = 1.0/(3.0/(2.0*dt) - nu*k_squared + mu)
 norm_factor_LF = 1.0/(3.0/(2.0*dt) - nu_LF*k_squared + mu)
-norm_factor_smooth = 1.0/(3.0/(2.0*dt) + tau2 - nu1*k_squared)
 
 j = 0; j2 = 0;  j4 = 0; idx = 0;
 T  = []; R_DE = []; R_DZ = []; Tau_E = []; DE = []; Tau_Z = []; DZ = []; R_tau_E = []; R_tau_Z = []  
@@ -666,8 +666,6 @@ for n in range(n_steps):
 
         EF_nm1_exact = np.fft.irfft2(EF_hat_nm1_exact)
         EF = np.fft.irfft2(EF_hat)
-        if smooth == True:
-            EF_np1_smooth = np.fft.irfft2(EF_hat_np1_smooth)
 
         psi_n_LF = np.fft.irfft2(get_psi_hat(w_hat_n_LF))
         dPsi_n = np.fft.irfft2(get_psi_hat(w_hat_n_HF - w_hat_n_LF))
