@@ -192,7 +192,32 @@ class Binning:
                 mapping[i] = binnumbers_i[0]
             
         self.mapping = mapping
+        
+    def plot_2D_binning_object(self):
+
+        if self.N_c != 2:
+            print 'Only works for N_c = 2'
+            return
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, xlabel=r'conditioning variable 1', ylabel=r'conditioning variable 2')
+        
+        #plot bins and (c1, c2) which corresponding to a r sample point
+        ax.plot(self.c[:,0], self.c[:,1], '+', color='lightgray', alpha=0.3)
+        ax.vlines(self.bins[0], np.min(self.c[:,1]), np.max(self.c[:,1]))
+        ax.hlines(self.bins[1], np.min(self.c[:,0]), np.max(self.c[:,0]))
        
+        ax.plot(self.x_mid_pad_tensor[:,0], self.x_mid_pad_tensor[:,1], 'g+')
+
+        for i in range(self.max_binnumber):
+            ax.plot([self.x_mid_pad_tensor[i][0], self.x_mid_pad_tensor[self.mapping[i]][0]], \
+                    [self.x_mid_pad_tensor[i][1], self.x_mid_pad_tensor[self.mapping[i]][1]], 'b', alpha=0.4)
+
+        ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        plt.tight_layout()
+        plt.show()
+        
     #the data-driven model for the unresolved scales
     #Given c_i return r at time i+1 (r_ip1)
     def get_r_ip1(self, c_i, n_mc=1):

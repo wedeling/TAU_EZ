@@ -125,28 +125,9 @@ for j in range(N_surr):
 
     surrogate[target].print_bin_info()
     
-fig = plt.figure()
-ax = fig.add_subplot(111)
-
-#plot bins and (c1, c2) which corresponding to a r sample point
-ax.plot(surrogate[target].c[:,0], surrogate[target].c[:,1], '+', color='lightgray', alpha=0.3)
-ax.vlines(surrogate[target].bins[0], np.min(surrogate[target].c[:,1]), np.max(surrogate[target].c[:,1]))
-ax.hlines(surrogate[target].bins[1], np.min(surrogate[target].c[:,0]), np.max(surrogate[target].c[:,0]))
-
-#mid points of all internal bins
-x_mid = [0.5*(surrogate[target].bins[i][1:] + surrogate[target].bins[i][0:-1]) for i in range(surrogate[target].N_c)]
-x_mid_tensor = np.array(list(product(*x_mid)))
-#ax.plot(x_mid_tensor[:,0], x_mid_tensor[:,1], 'g+')
 
 surrogate[target].fill_in_blanks()
-
-x_mid_pad = surrogate[target].x_mid_pad_tensor
-mapping = surrogate[target].mapping
-
-ax.plot(x_mid_pad[:,0], x_mid_pad[:,1], 'g+')
-
-for i in range(surrogate[target].max_binnumber):
-    ax.plot([x_mid_pad[i][0], x_mid_pad[mapping[i]][0]], [x_mid_pad[i][1], x_mid_pad[mapping[i]][1]], 'b', alpha=0.4)
+surrogate[target].plot_2D_binning_object()
 
 #plot non empty midpoints
 #ax.plot(surrogate[target].midpoints[:,0], surrogate[target].midpoints[:,1], 'g+')
