@@ -90,7 +90,6 @@ class Binning:
         for i in range(N_c):
             midpoints[:, i] = x_mid[i][x_idx_nonempty[i]]
 
-        
         self.verbose = verbose
         self.bins = bins
         self.count = count
@@ -99,15 +98,10 @@ class Binning:
         self.midpoints = midpoints
         self.idx_of_bin = idx_of_bin
         self.unique_binnumbers = unique_binnumbers
-        self.compute_binnumber_per_bin()
         self.fill_in_blanks()
 
-        #mean r / var per cell
+        #mean r per cell
         self.rmean, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='mean', bins=bins)
-        #self.rstd, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic=std_per_bin, bins=bins)
-        #self.rmax, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='max', bins=bins)
-        #self.rmin, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='min', bins=bins)
-        #self.compute_c_samples_per_bin()
 
     #check which c_i fall within empty bins and correct binnumbers_i by
     #projecting to the nearest non-empty bin
@@ -153,13 +147,6 @@ class Binning:
 
             binnumbers_i[outliers_idx] = binnumbers_closest
             
-    def get_binnumbers_i(self, c_i):
-
-        #find in which bins the c_i samples fall, shape: (N**2,)
-        _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
-                
-        return binnumbers_i
-
     #create an apriori mapping between every possible bin and the nearest 
     #non-empty bin. Non-empty bins will link to themselves.
     def fill_in_blanks(self):
@@ -277,29 +264,6 @@ class Binning:
     
         return self.rmean[x_idx].reshape([self.N, self.N]) #, self.rstd[x_idx].reshape([self.N, self.N])
 
-    #Given c_i, randomly sample from sub bin averages, according to the jump pmfs
-    def get_sub_mean_r_ip1(self, c_i):
-        
-        #find in which bins the c_i samples fall
-        _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
-        
-        #dynamically corrects binnumbers_i if outliers are found
-        #self.check_outliers(binnumbers_i, c_i)
-
-        #static correction for outliers, using precomputed mapping array
-        binnumbers_i = self.mapping[binnumbers_i]
-  
-        #the selected jump pmfs for each spatial point
-        pmfs = self.jump_pmfs[binnumbers_i]
-        #N**2 random U(0, 1) samples to select the sub bin
-        xi = np.random.rand(self.N**2)
-        
-        #draw a random sample from each pmf 
-        sub_idx = [pmf_i.ppf(xi_i) for xi_i, pmf_i in zip(xi, pmfs)] #QUESTION: CAN THIS BE VECTORIZED? 
-        sub_idx = np.array(sub_idx).astype('int')
-        
-        return self.r_sub_mean[binnumbers_i, sub_idx].reshape([self.N, self.N])
-
     #append the covariates supplied to the binning object during simulation
     #to self.covars
     #Note: use list to dynamically append, array is very slow
@@ -327,262 +291,7 @@ class Binning:
                 import sys; sys.exit()
             
         return c_i       
-
-    #compute the probabilities of staying or jumping to the left/right of the current bin, 
-    #when sampling randomly from each bin
-    #ASSUMES AUTOCORRELATED SURROGATE WITH ONE COVARIATE
-    def compute_surrogate_jump_probabilities(self, plot=False):
-
-        if self.N_c != 1:
-            print 'Only works for N_c = 1'
-            return
-
-        #store the jump probabilities of the surrogate per bin
-        self.surrogate_jump_probs = np.zeros([self.N_bins+1, 3])
-
-        #store the r sample means of each jump probability per bin
-        self.r_sub_mean = np.zeros([self.N_bins+1, 3])
-
-        if plot == True:
-            fig = plt.figure()
-            ax = fig.add_subplot(111, xlabel=r'$\mathcal{C}_i$', ylabel=r'$\overline{r}_{i+1}$')
-
-        for j in range(self.unique_binnumbers.size):
-
-            J = self.unique_binnumbers[j]
-
-            #indices of all r samples in the current bin
-            idx = np.where(self.binnumber == J)[0]
-
-            #r samples of the current bin
-            r_idx = self.r_ip1[idx]
-
-            if r_idx.size > 0:
-                #indices of r_idx, IF USED AS COVARIATE
-                _, _, bins_idx = stats.binned_statistic_dd(r_idx, np.zeros(r_idx.size), bins=self.bins)
-
-                #number of samples in the current bin
-                nsamples_bin = np.double(idx.size)
-
-                print '++++++++++++++++++++'
-                print 'Bin ', J
-
-                #indices that are unchanged, larger or smaller than the current bin index
-                same_idx = np.where(bins_idx== J)[0]
-                left_idx = np.where(bins_idx < J)[0]
-                right_idx = np.where(bins_idx > J)[0]
-
-                #compute jump probabilities      
-                self.surrogate_jump_probs[J, 0] = left_idx.size/nsamples_bin
-                self.surrogate_jump_probs[J, 1] = same_idx.size/nsamples_bin
-                self.surrogate_jump_probs[J, 2] = right_idx.size/nsamples_bin
-
-                print 'Number of samples in bin =', nsamples_bin
-                print 'Jump left probability = ', left_idx.size/nsamples_bin
-                print 'Stay probability =', same_idx.size/nsamples_bin
-                print 'Jump right probability =', right_idx.size/nsamples_bin
-
-                #bin mean associated with each jump event
-                self.r_sub_mean[J, 0] = np.mean(self.r_ip1[idx[left_idx]])
-                self.r_sub_mean[J, 1] = np.mean(self.r_ip1[idx[same_idx]])
-                self.r_sub_mean[J, 2] = np.mean(self.r_ip1[idx[right_idx]])
-
-                #colorcode samples per bin based on jump behavior
-                if plot == True:
-
-                    #color code samples in current bin based on the bin that will be occupied in next iteration
-                    ax.plot(self.c[idx[same_idx]], self.r_ip1[idx[same_idx]], '+', color='darkgray', alpha = 0.1)
-                    ax.plot(self.c[idx[left_idx]], self.r_ip1[idx[left_idx]], '+', color='lightgray', alpha = 0.1)
-                    ax.plot(self.c[idx[right_idx]], self.r_ip1[idx[right_idx]], '+', color='lightgray', alpha = 0.1)
-
-                    #plot mean of the stay, jump left/right samples per bin
-                    ax.plot(np.mean(self.c[idx[left_idx]]), self.r_sub_mean[J, 0], 'ko')
-                    ax.plot(np.mean(self.c[idx[same_idx]]), self.r_sub_mean[J, 1], 'ko')
-                    ax.plot(np.mean(self.c[idx[right_idx]]), self.r_sub_mean[J, 2], 'ko')
-
-                    ax.vlines(self.bins, np.min(self.r_ip1), np.max(self.r_ip1))
-
-                    plt.tight_layout()
-                    #plt.savefig('jump.png', dpi=400)
-
-    #Compute the probabilities on staying, jumping to the left or the right of the current bin
-    #Based on the r data
-    def compute_jump_probabilities(self):
-
-        print 'Computing jump probabilities using', self.N_s, 'data fields'
-
-        #reshape the binnumbers of the data 
-        binnumbers_k = self.binnumber.reshape([self.N**2, self.N_s])
-
-        #store the number/prob of jumps to the left, in place or to the right
-        #size = N_bins+1 since bin indices start at 1
-        self.jumps = np.zeros([self.N_bins+1, 3])
-        self.jump_probs = np.zeros([self.N_bins+1, 3])
-        self.jump_pmfs = [] 
-        self.jump_pmfs.append([])
-
-        for s in range(np.max(self.lags), self.N_s):
-            #the binnumbers of the s-th data entry
-            binnumbers_i = binnumbers_k[:, s-np.max(self.lags)]
-            #the binnumbers of the (s+1)-th data entry
-            binnumbers_ip1 = binnumbers_k[:, s]
-
-            #no bin change indices
-            no_jump_idx = np.where(binnumbers_i == binnumbers_ip1)[0]
-            #jumped to the left indices
-            jump_left_idx = np.where(binnumbers_i > binnumbers_ip1)[0]
-            #jumped to the right indices
-            jump_right_idx = np.where(binnumbers_i < binnumbers_ip1)[0]
-
-            #count number of jumps (IN CASE OF A FIELD SAMPLE)
-            #count_bins = np.arange(0.5, self.N_bins+1, 1)   #bins surrounding the binnumbers 1, 2, 3, ... (bins=[0.5, 1.5, 2.5, 3.5, ...])
-            #jump_left_count, _, _ = stats.binned_statistic(binnumbers_i[jump_left_idx], np.zeros(jump_left_idx.size), statistic='count', bins=count_bins) 
-            #stay_count, _, _ = stats.binned_statistic(binnumbers_i[no_jump_idx], np.zeros(no_jump_idx.size), statistic='count', bins=count_bins) 
-            #jump_right_count, _, _ = stats.binned_statistic(binnumbers_i[jump_right_idx], np.zeros(jump_right_idx.size), statistic='count', bins=count_bins) 
-            #
-            #self.jumps[1:, 0] += jump_left_count 
-            #self.jumps[1:, 1] += stay_count
-            #self.jumps[1:, 2] += jump_right_count 
-
-            jump_left_count = jump_left_idx.size
-            stay_count = no_jump_idx.size
-            jump_right_count = jump_right_idx.size
-
-            self.jumps[binnumbers_i, 0] += jump_left_count
-            self.jumps[binnumbers_i, 1] += stay_count
-            self.jumps[binnumbers_i, 2] += jump_right_count
-
-        #compute jump probabilities per bin
-        for j in range(1, self.N_bins+1):
-            self.jump_probs[j,:] = self.jumps[j,:]/np.sum(self.jumps[j,:])
-            print 'Jump probabities bin ', j, '=', self.jump_probs[j, :]
-
-            #create probability mass functions
-            self.jump_pmfs.append(stats.rv_discrete(values=(range(3), self.jump_probs[j,:])))
-
-        self.jump_pmfs = np.array(self.jump_pmfs)
-
-    #plot the jump probability of the data and the surrogate per bin
-    def plot_jump_pmfs(self):
-       
-        try:
-            fig = plt.figure(figsize = [6.4, 5.8])
-            x = np.arange(1, self.N_bins+1)
-
-            #left probs
-            ax = fig.add_subplot(311, ylabel=r'jump left prob.', xlabel=r'bin', ylim=[0, 1])
-            ax.plot(x + 0.2, self.jump_probs[1:, 0], 'bo', ms=12, label=r'$\mathbb{P}\left(\bar{r}_{i+1}\in b_{j-k}\mid\bar{r}_i\in b_j\right)$')            
-            ax.vlines(x + 0.2, 0, self.jump_probs[1:, 0], colors='b', lw=4)
-            
-            ax.plot(x - 0.2, self.surrogate_jump_probs[1:, 0], 'rs', ms=12,  label=r'$\mathbb{P}\left(\widetilde{r}_{i+1}\in b_{j-k}\mid\widetilde{r}_i\in b_j\right)$')            
-            ax.vlines(x - 0.2, 0, self.surrogate_jump_probs[1:, 0], colors='r', lw=4)
-
-            leg = plt.legend(loc=0)
-            leg.draggable(True)
-            ax.set_xticks(range(self.N_bins+1))
-
-            #right probs
-            ax = fig.add_subplot(312, ylabel=r'stay prob.', xlabel=r'bin', ylim=[0, 1])
-            ax.plot(x + 0.2, self.jump_probs[1:, 1], 'bo', ms=12, label=r'$\mathbb{P}\left(\bar{r}_{i+1}\in b_{j}\mid\bar{r}_i\in b_j\right)$')            
-            ax.vlines(x + 0.2, 0, self.jump_probs[1:, 1], colors='b', lw=4)
-            
-            ax.plot(x - 0.2, self.surrogate_jump_probs[1:, 1], 'rs', ms = 12, label=r'$\mathbb{P}\left(\widetilde{r}_{i+1}\in b_{j}\mid\widetilde{r}_i\in b_j\right)$')            
-            ax.vlines(x - 0.2, 0, self.surrogate_jump_probs[1:, 1], colors='r', lw=4)
-            
-            leg = plt.legend(loc=0)
-            leg.draggable(True)
-            ax.set_xticks(range(self.N_bins+1))
-            
-            #right probs
-            ax = fig.add_subplot(313, ylabel=r'jump right prob.', xlabel=r'bin', ylim=[0, 1])
-            ax.plot(x + 0.2, self.jump_probs[1:, 2], 'bo', ms = 12, label=r'$\mathbb{P}\left(\bar{r}_{i+1}\in b_{j+k}\mid\bar{r}_i\in b_j\right)$')
-            ax.vlines(x + 0.2, 0, self.jump_probs[1:, 2], colors='b', lw=4)
-            
-            ax.plot(x - 0.2, self.surrogate_jump_probs[1:, 2], 'rs', ms = 12, label=r'$\mathbb{P}\left(\widetilde{r}_{i+1}\in b_{j+k}\mid\widetilde{r}_i\in b_j\right)$')
-            ax.vlines(x - 0.2, 0, self.surrogate_jump_probs[1:, 2], colors='r', lw=4)
-            
-            leg = plt.legend(loc=0)
-            leg.draggable(True)
-            ax.set_xticks(range(self.N_bins+1))
-
-            plt.tight_layout()
-
-        #if jump probabilities do not exist
-        except AttributeError:
-            plt.close()
-            print 'Compute probabilities first'
-
-    #c samples per bin stored as an array of arrays instead of 1d array
-    def compute_c_samples_per_bin(self):
-
-        c_per_bin = []
-        
-        for b in range(np.max(self.unique_binnumbers)+1):
-            
-            idx = np.where(self.binnumber == b)[0]
-            c_per_bin.append(self.c[idx])
-            
-        self.c_per_bin = np.array(c_per_bin)
-        
-    #same as idx_per_bin only stored as a dict instead of 1d array
-    def compute_binnumber_per_bin(self):
-
-        idx_per_bin_dict = {}
-        
-        for b in self.unique_binnumbers:
-            #r_ip1 indices of bin b
-            idx_per_bin_dict[b] = np.where(self.binnumber == b)[0]
-            
-        self.idx_per_bin_dict = idx_per_bin_dict
-        
-    def plot_samples_per_bin(self, subsample=1):
-        
-        if self.N_c == 1:
-        
-            fig = plt.figure()
-            ax = fig.add_subplot(111, xlabel=r'$\mathrm{conditioning\;variable}$', ylabel=r'$\mathrm{reference\;data}$')
-            
-            for b in self.unique_binnumbers:
-                
-                c_b = self.c[self.idx_per_bin_dict[b]]
-                r_b = self.r_ip1[self.idx_per_bin_dict[b]]
-
-                ax.plot(c_b[0:-1:subsample], r_b[0:-1:subsample], '+', color='lightgray', alpha=0.3)
-                ax.plot(np.mean(c_b), np.mean(r_b), 'ko', markersize=6)
-                
-            ax.vlines(self.bins, np.min(self.r_ip1), np.max(self.r_ip1))
-            ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-            ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-            plt.tight_layout()
-            #plt.savefig('bins.png', dpi=300)
-
-        plt.show()
-
-    #plots the mean and std dev per bin, ASSUMES 2 COVARIATES
-    def plot_bin_stats(self):
-        
-        if self.N_c != 2:
-            print 'Only works for 2D c'
-        else:
-            
-            fig = plt.figure(figsize=[8.0, 3.71])
-            ax = fig.add_subplot(121)
-            ax.set_title(r'$\mathbb{E}[r]$', fontsize=20)
-            ax.set_xlabel(r'$c_1\;\mathrm{bins}$', fontsize=20)
-            ax.set_ylabel(r'$c_2\;\mathrm{bins}$', fontsize=20)
-            im = ax.imshow(self.rmean)
-            plt.colorbar(im)
-            #
-            ax = fig.add_subplot(122)
-            ax.set_title(r'$\sqrt{\mathbb{V}ar[r]}$', fontsize=20)
-            ax.set_xlabel(r'$c_1\;\mathrm{bins}$', fontsize=20)
-            ax.set_ylabel(r'$c_2\;\mathrm{bins}$', fontsize=20)
-            im = ax.imshow(self.rstd)
-            plt.colorbar(im)
-            
-            plt.tight_layout()
-            plt.show()
-            
+           
     def print_bin_info(self):
         print '-------------------------------'
         print 'Total number of samples= ', self.r_ip1.size
@@ -601,35 +310,6 @@ class Binning:
     
         return bins
     
-    def get_bins_same_nsamples(self, N_bins):
-        
-        if self.N_c != 1:
-            print 'Only works for N_c = 1'
-            return
-        
-        Ns = self.c.size
-        
-        delta = Ns/N_bins
-        
-        c_sorted = np.sort(self.c.reshape(Ns))
-        
-        bins = []
-        bins.append(c_sorted[0])
-        
-        for i in range(N_bins-1):
-            bins.append(c_sorted[(i+1)*delta])
-            
-        bins.append(c_sorted[-1])
-            
-        #plt.figure()
-        #plt.plot(c_sorted, 'b')
-        #plt.plot(np.zeros(N_bins+1), bins, 'ro')
-        
-        return [np.array(bins)]
-
-def std_per_bin(x):
-    return np.var(x)**0.5
-
 import numpy as np
 from scipy import stats
 from itertools import chain, product
