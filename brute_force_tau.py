@@ -297,7 +297,6 @@ mu = 1.0/(day*decay_time_mu)
 #start, end time, end time of data (training period), time step
 t = 250.0*day
 t_end = t + 8.0*365*day
-t_end = t + 8.0*365*day
 t_data = t + 8.0*365.0*day 
 dt = 0.01
 n_steps = np.ceil((t_end-t)/dt).astype('int')
