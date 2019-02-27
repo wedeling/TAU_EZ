@@ -1,3 +1,20 @@
+"""
+===================================================================================
+CLASS FOR THE BINNING SURROGATE PROCEDURE
+-----------------------------------------------------------------------------------
+
+Reference:
+
+N. Verheul, D. Crommelin, 
+"Data-driven stochastic representations of unresolved features in multiscale models"
+Communications in Mathematical Sciences, 14, 5, 2016.
+
+
+Code: W. Edeling
+===================================================================================
+
+"""
+
 class Binning:
     
     def __init__(self, c, r_ip1, N, N_bins, lags, store_frame_rate=1, uniform_bins = True, min_count = 0, verbose = True):
@@ -30,8 +47,6 @@ class Binning:
         #binedges = same as bins
         #binnumber = bin indices of the r_ip1 samples. A 1D array, no matter N_c
         count, binedges, binnumber = stats.binned_statistic_dd(c, r_ip1, statistic='count', bins=bins)
-        #x_idx = np.unravel_index(binnumber, [len(b) + 1 for b in self.bins])
-        #x_idx = [x_idx[i] - 1 for i in range(N_c)]
         
         #the unique set of binnumers which have at least one r_ip1 sample
         unique_binnumbers = np.unique(binnumber)
@@ -98,7 +113,10 @@ class Binning:
         self.midpoints = midpoints
         self.idx_of_bin = idx_of_bin
         self.unique_binnumbers = unique_binnumbers
+        
+        print 'Connecting all possible empty bins to nearest non-empty bin...'
         self.fill_in_blanks()
+        print 'done.'
 
         #mean r per cell
         self.rmean, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='mean', bins=bins)

@@ -1,8 +1,18 @@
 """
-*************************
-* S U B R O U T I N E S *
-*************************
+=================================================
+CODE CORRESPONDING TO THE UNCECOMP19 PAPER:
+-------------------------------------------------
+
+W. Edeling, D. Crommelin,
+"Reduced model-error source terms for fluid flow"
+UNCECOMP 19 Conference, Crete, June -24-26, 2019
+
+==================================================
 """
+
+##########################
+# S U B R O U T I N E S  #
+##########################
 
 #pseudo-spectral technique to solve for Fourier coefs of Jacobian
 def compute_VgradW_hat(w_hat_n, P):
@@ -476,7 +486,7 @@ if eddy_forcing_type == 'binned':
         #create a surrogate model object
         print 'Creating Binning object...'
         from binning import *
-        surrogate[target] = Binning(c_i, r.flatten(), 1, N_bins, lags = lags[target], store_frame_rate = store_frame_rate, verbose=True)
+        surrogate[target] = Binning(c_i, r.flatten(), 1, N_bins, lags = lags[target], verbose=False)
         print 'done'
 
         surrogate[target].print_bin_info()
