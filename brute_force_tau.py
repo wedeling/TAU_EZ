@@ -199,21 +199,20 @@ def get_w_hat_prime(w_hat_n):
 def corr_coef(X, Y):
     return np.mean((X - np.mean(X))*(Y - np.mean(Y)))/(np.std(X)*np.std(Y))
 
-"""
-***************************
-* M A I N   P R O G R A M *
-***************************
-"""
+
+###########################
+# M A I N   P R O G R A M #
+###########################
 
 import numpy as np
 import matplotlib.pyplot as plt
 import os, cPickle
 import h5py
-from drawnow import drawnow
 from scipy.integrate import simps
 from itertools import combinations, chain
 import sys
 import json
+#from drawnow import drawnow
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
