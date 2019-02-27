@@ -328,7 +328,6 @@ plot = False            #plot results while running, requires drawnow package
 corr = False            #compute and store correlations
 
 eddy_forcing_type = 'binned'    #which eddy forcing to use
-binning_type = 'global'
 
 if sim_ID == 'tau_EZ' or sim_ID == 'tau_EZ_PE_HF':
     print 'Using HF nu_LF'
@@ -343,7 +342,7 @@ else:
     import sys; sys.exit()
 
 sim_number = sys.argv[1]
-store_ID = sim_ID + '_' + binning_type + '_' + sim_number 
+store_ID = sim_ID + '_' + sim_number 
 
 ###############################
 # SPECIFY WHICH DATA TO STORE #
@@ -509,14 +508,13 @@ if eddy_forcing_type == 'binned':
         N_bins = 10
 
         print 'Creating Binning object...'
-        if binning_type == 'global':
-            from binning import *
-            surrogate[target] = Binning(c_i, r.flatten(), 1, N_bins, lags = lags[target], store_frame_rate = store_frame_rate, verbose=True)
-            #surrogate[target].plot_samples_per_bin()
-            #if N_c == 1:
-            #    surrogate[target].compute_surrogate_jump_probabilities(plot = True)
-            #    surrogate[target].compute_jump_probabilities()
-            #    surrogate[target].plot_jump_pmfs()
+        from binning import *
+        surrogate[target] = Binning(c_i, r.flatten(), 1, N_bins, lags = lags[target], store_frame_rate = store_frame_rate, verbose=True)
+        #surrogate[target].plot_samples_per_bin()
+        #if N_c == 1:
+        #    surrogate[target].compute_surrogate_jump_probabilities(plot = True)
+        #    surrogate[target].compute_jump_probabilities()
+        #    surrogate[target].plot_jump_pmfs()
         print 'done'
 
         surrogate[target].print_bin_info()
