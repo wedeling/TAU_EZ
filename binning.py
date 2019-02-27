@@ -89,6 +89,7 @@ class Binning:
         midpoints = np.zeros([N_nonempty, N_c])
         for i in range(N_c):
             midpoints[:, i] = x_mid[i][x_idx_nonempty[i]]
+
         
         self.verbose = verbose
         self.bins = bins
@@ -99,6 +100,7 @@ class Binning:
         self.idx_of_bin = idx_of_bin
         self.unique_binnumbers = unique_binnumbers
         self.compute_binnumber_per_bin()
+        self.fill_in_blanks()
 
         #mean r / var per cell
         self.rmean, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='mean', bins=bins)
