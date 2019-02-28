@@ -1,4 +1,4 @@
-# TAU_EZ UNCECOMP 19
+# TAU_EZ ECCOMAS-UNCECOMP 2019
 
 This branch of the TAU_EZ is meant to reproduce the results of our UNCECOMP19 conference paper:
 
