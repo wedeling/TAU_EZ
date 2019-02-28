@@ -20,6 +20,7 @@ models for unresolved scales in geophysical flows", and from the European Union 
 + Numpy
 + Matplotlib
 + h5py
++ (Optional) [drawnow](https://github.com/stsievert/python-drawnow)
 
 In order to reproduce the probability density functions of the reduced training data (Section 3.2) run:
 
