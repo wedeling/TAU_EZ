@@ -11,7 +11,18 @@ It is well known that the wide range of spatial and temporal scales present in g
 
 ## Reproduction of main results
 
+### Dependencies
+
 In order to reproduce the probability density functions of the reduced training data (Section 3.2) run:
 
 *python tau_ez_ocean.py ./inputs/training.json*
+
+This generate the training data in the ./samples directory, which can be visualized with:
+
+*python ....*
+
+Likewise, the T2 and T3 results can be reproced with
+
+*python tau_ez_ocean.py ./inputs/T2.json* or
+*python tau_ez_ocean.py ./inputs/T3.json*
 
