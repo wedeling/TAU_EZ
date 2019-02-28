@@ -1,4 +1,4 @@
-# TAU_EZ ECCOMAS-UNCECOMP 2019
+# ECCOMAS-UNCECOMP 2019
 
 This branch of the TAU_EZ is meant to reproduce the results of our UNCECOMP19 conference paper:
 
@@ -12,6 +12,10 @@ It is well known that the wide range of spatial and temporal scales present in g
 ## Reproduction of main results
 
 ### Dependencies
++ Python 2
++ Numpy
++ Matplotlib
++ h5py
 
 In order to reproduce the probability density functions of the reduced training data (Section 3.2) run:
 
@@ -21,9 +25,12 @@ This generate the training data in the ./samples directory, which can be visuali
 
 *python ....*
 
-Likewise, the T2 and T3 results can be reproced with
+Likewise, the main results of Section 4 can be reproduced with:
 
 *python tau_ez_ocean.py ./inputs/T2.json*
+*python ...*
+
+and
 
 *python tau_ez_ocean.py ./inputs/T3.json*
-
+*python ...*
