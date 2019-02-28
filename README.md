@@ -13,7 +13,5 @@ It is well known that the wide range of spatial and temporal scales present in g
 
 In order to reproduce the probability density functions of the reduced training data (Section 3.2) run:
 
-'''python
-python tau_ez_ocean.py ./inputs/training.json
-'''
+*python tau_ez_ocean.py ./inputs/training.json*
 
