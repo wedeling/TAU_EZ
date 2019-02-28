@@ -1,0 +1,2 @@
+0
+{"plot": false, "input_file": "training", "state_store": false, "compute_ref": true, "restart": true, "eddy_forcing_type": "tau_ortho", "store": true}

@@ -4,8 +4,9 @@ import os
 
 HOME = os.path.abspath(os.path.dirname(__file__))
 
-fname = 'T2'
+input_file = 'training'
 target = ['dE', 'dZ']
+target = []
 covariates = [['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF'], ['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF']]
 #covariates = [['e_n_LF', 'z_n_LF']]
 #covariates = [['auto', 'z_n_LF', 'e_n_LF', 'u_n_LF'], ['auto', 'z_n_LF', 'e_n_LF', 'u_n_LF']]
@@ -18,7 +19,7 @@ extrap_ratio = [1.0, 1.0]
 
 N_surr = len(target)
 
-fpath = HOME + '/inputs/' + fname + '.json'
+fpath = HOME + '/inputs/' + input_file + '.json'
 
 print 'Generating input file', fpath
 
@@ -28,9 +29,22 @@ if os.path.isfile(fpath) == True:
 fp = open(fpath, 'a')
 fp.write('%d\n' % N_surr)
 
+flags = {}
+flags['input_file'] = input_file
+flags['state_store'] = False
+flags['restart'] = True
+flags['store'] = True
+flags['plot'] = False
+flags['compute_ref'] = True
+flags['eddy_forcing_type'] = 'tau_ortho'
+
+json.dump(flags, fp)
+fp.write('\n')
+
+print flags
+
 for i in range(len(target)):
     json_in = {}
-    json_in['fname'] = fname
     json_in['target'] = target[i]
     json_in['covariates'] = covariates[i]
     json_in['N_c'] = len(covariates[i]) 

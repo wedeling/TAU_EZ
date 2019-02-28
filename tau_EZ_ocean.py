@@ -301,17 +301,34 @@ S = np.floor(n_steps/store_frame_rate).astype('int')
 tau_E_max = 1.0
 tau_Z_max = 1.0
 
-#flags 
-state_store = False     #store the state at the end
-restart = True          #restart from prev state
-store = True            #store data
-plot = False            #plot results while running, requires drawnow package
-compute_ref = True      #compute the reference solution as well, keep at True, will automatically turn off in surrogate mode
+#read flags from input file
+fpath = sys.argv[1]
+fp = open(fpath, 'r')
+N_surr = int(fp.readline())
+inputs = []
 
-eddy_forcing_type = 'binned'    #which eddy forcing to use (binned, tau_ortho, exact, unparam)
+flags = json.loads(fp.readline())
+print '*********************'
+print 'Simulation flags'
+print '*********************'
 
-sim_number = sys.argv[1]
-store_ID = sim_ID + '_' + sim_number 
+for key in flags.keys():
+    vars()[key] = flags[key]
+    print key, '=', flags[key]    
+
+print '*********************'
+
+#Manual specification of flags 
+#state_store = False     #store the state at the end
+#restart = True          #restart from prev state
+#store = True            #store data
+#plot = False            #plot results while running, requires drawnow package
+#compute_ref = True      #compute the reference solution as well, keep at True, will automatically turn off in surrogate mode
+#
+#eddy_forcing_type = 'binned'    #which eddy forcing to use (binned, tau_ortho, exact, unparam)
+#input_file = 'manual'
+
+store_ID = sim_ID + '_' + input_file 
 
 ###############################
 # SPECIFY WHICH DATA TO STORE #
@@ -351,11 +368,16 @@ F = 2**1.5*np.cos(5*x)*np.cos(5*y);
 F_hat = np.fft.rfft2(F);
 
 if restart == True:
-    
+
+    print 'Restarting from t =', str(np.around(t/day, 1))
+        
     state = cPickle.load(open(HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t/day, 1)) + '.pickle'))
     for key in state.keys():
         print key
         vars()[key] = state[key]
+
+    print '*********************'
+
 else:
     
     #initial condition
@@ -396,11 +418,7 @@ if eddy_forcing_type == 'binned':
     #####################################
     # read the inputs for the surrogate #
     #####################################
-    fpath = sys.argv[2]
-    fp = open(fpath, 'r')
-    N_surr = int(fp.readline())
-    inputs = []
-    
+   
     for i in range(N_surr):
         inputs.append(json.loads(fp.readline()))
         
@@ -441,7 +459,7 @@ if eddy_forcing_type == 'binned':
         print '***********************'
         print 'Parameters'
         print '***********************'
-        print 'Sim number =', sim_number
+        print 'Input file =', input_file 
         print 'Target =', target
         print 'Covariates =', covariates[target]
         print 'Excluding', S_extrap, ' points from training set' 
@@ -472,7 +490,7 @@ if eddy_forcing_type == 'binned':
             else:
                 c_i[:, i] = h5f[covariates[target][i]][i1-lag_i:i2-lag_i]
 
-        #the surrogate target (\Delta E of \Delta Z )
+        #the surrogate target (\Delta E or \Delta Z )
         if target == 'dZ':
             r = h5f['z_n_HF'][i1:i2] - h5f['z_n_LF'][i1:i2]
         elif target == 'dE':
