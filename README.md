@@ -19,14 +19,14 @@ models for unresolved scales in geophysical flows", and from the European Union 
 + Python 2
 + Numpy
 + Matplotlib
-+ h5py
++ [h5py](https://github.com/h5py/h5py)
 + (Optional) [drawnow](https://github.com/stsievert/python-drawnow)
 
 In order to reproduce the probability density functions of the reduced training data (Section 3.2) run:
 
 *python tau_ez_ocean.py ./inputs/training.json*
 
-This generate the training data in the ./samples directory, which can be visualized with:
+This generates the training data in the ./samples directory, which can be visualized with:
 
 *python ....*
 
