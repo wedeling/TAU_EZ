@@ -23,6 +23,7 @@ This generate the training data in the ./samples directory, which can be visuali
 
 Likewise, the T2 and T3 results can be reproced with
 
-*python tau_ez_ocean.py ./inputs/T2.json* or
+*python tau_ez_ocean.py ./inputs/T2.json*
+
 *python tau_ez_ocean.py ./inputs/T3.json*
 
