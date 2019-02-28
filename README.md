@@ -25,20 +25,18 @@ models for unresolved scales in geophysical flows", and from the European Union 
 
 In order to reproduce the probability density functions of the reduced training data (Section 3.2) run:
 
-*python tau_ez_ocean.py ./inputs/training.json*
++ *python tau_ez_ocean.py ./inputs/training.json*
 
 This generates the training data in the ./samples directory, which can be visualized with:
 
-*python plot_EZ_stats.py ./inputs/training.json*
++ *python plot_EZ_stats.py ./inputs/training.json*
 
 Likewise, the main results of Section 4 can be reproduced with:
 
-*python tau_ez_ocean.py ./inputs/T2.json*
-
-*python plot_EZ_stats.py ./inputs/T2.json*
++ *python tau_ez_ocean.py ./inputs/T2.json*
++ *python plot_EZ_stats.py ./inputs/T2.json*
 
 and
 
-*python tau_ez_ocean.py ./inputs/T3.json*
-
-*python plot_EZ_stats.py ./inputs/T3.json*
++ *python tau_ez_ocean.py ./inputs/T3.json*
++ *python plot_EZ_stats.py ./inputs/T3.json*
