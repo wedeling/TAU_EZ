@@ -11,7 +11,7 @@ It is well known that the wide range of spatial and temporal scales present in g
 
 ## Funding
 This research is funded by the Netherlands Organization for Scientific Research (NWO) through the Vidi project "Stochastic
-models for unresolved scales in geophysical flows", and from the European Union Horizon 2020 research and innovation programme under grant agreement \#800925 (VECMA project). 
+models for unresolved scales in geophysical flows", and from the European Union Horizon 2020 research and innovation programme under grant agreement \#800925 ([VECMA](https://www.vecma.eu/) project). 
 
 ## Reproduction of main results
 
