@@ -1,0 +1,1 @@
+samples/precomputed_training_t_3170.0.hdf5 filter=lfs diff=lfs merge=lfs -text
