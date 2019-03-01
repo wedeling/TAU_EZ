@@ -404,17 +404,6 @@ else:
 
 if eddy_forcing_type == 'binned':
 
-    ###########################
-    # load the reference data #
-    ###########################
-    fname = HOME + '/samples/' + sim_ID + '_exact_training_t_' + str(np.around(t_data/day, 1)) + '.hdf5'
-
-    print 'Loading', fname
-
-    h5f = h5py.File(fname, 'r')
-
-    print h5f.keys()
-
     #####################################
     # read the inputs for the surrogate #
     #####################################
@@ -425,6 +414,18 @@ if eddy_forcing_type == 'binned':
     print '****************************'
     print 'Creating', N_surr, ' surrogates'
     print '****************************'
+
+    ###########################
+    # load the reference data #
+    ###########################
+    #fname = HOME + '/samples/' + sim_ID + '_exact_training_t_' + str(np.around(t_data/day, 1)) + '.hdf5'
+    fname = HOME + '/samples/' + inputs[0]['training_data']  + '.hdf5'
+
+    print 'Loading', fname
+
+    h5f = h5py.File(fname, 'r')
+
+    print h5f.keys()
 
     #########################
     # create the surrogates #
