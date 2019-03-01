@@ -1,4 +1,4 @@
 2
 {"plot": false, "input_file": "T2", "state_store": false, "compute_ref": true, "restart": true, "eddy_forcing_type": "binned", "store": true}
-{"extrap_ratio": 1.0, "N_c": 4, "target": "dE", "lag": [1, 1, 1, 1], "covariates": ["z_n_LF", "e_n_LF", "u_n_LF", "s_n_LF"]}
-{"extrap_ratio": 1.0, "N_c": 4, "target": "dZ", "lag": [1, 1, 1, 1], "covariates": ["z_n_LF", "e_n_LF", "u_n_LF", "s_n_LF"]}
+{"target": "dE", "lag": [1, 1, 1, 1], "covariates": ["z_n_LF", "e_n_LF", "u_n_LF", "s_n_LF"], "training_data": "precomputed_training_t_3170.0", "extrap_ratio": 1.0, "N_c": 4}
+{"target": "dZ", "lag": [1, 1, 1, 1], "covariates": ["z_n_LF", "e_n_LF", "u_n_LF", "s_n_LF"], "training_data": "precomputed_training_t_3170.0", "extrap_ratio": 1.0, "N_c": 4}

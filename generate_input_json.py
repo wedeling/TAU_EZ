@@ -5,13 +5,13 @@ import os
 HOME = os.path.abspath(os.path.dirname(__file__))
 
 #name of the generated input file
-input_file = 'T3'
+input_file = 'training'
 
 #surrogate targets (Delta E and Delta Z)
 target = ['dE', 'dZ']
 
 #specify an empty target if generating training set
-#target = []
+target = []
 
 #choose the conditioning variables (variable names must match those in the main file:tau_ez_ocean.py)
 covariates = [['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF'], ['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF']]
@@ -20,7 +20,7 @@ covariates = [['z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF'], ['z_n_LF', 'e_n_LF', 'u_
 lag = [[1, 1, 1, 1], [1, 1, 1, 1]]
 
 #alpha: the extrapolation ratio (e.g. 0.9 = use 90% of training data)
-extrap_ratio = [0.7, 0.7]
+extrap_ratio = [1.0, 1.0]
 
 #number of surrogates to be constructed
 N_surr = len(target)
@@ -43,7 +43,7 @@ flags['restart'] = True                     #restart from previously stored stat
 flags['store'] = True                       #store data
 flags['plot'] = False                       #plot results while running (required drawnow package)
 flags['compute_ref'] = True                 #compute the reference solution as well, leave at True, will automatically turn off in surrogate mode
-flags['eddy_forcing_type'] = 'binned'       #choose 'binned' for surrogate mode, choose 'tau_ortho' for training mode
+flags['eddy_forcing_type'] = 'tau_ortho'    #choose 'binned' for surrogate mode, choose 'tau_ortho' for training mode
 
 json.dump(flags, fp)
 fp.write('\n')
