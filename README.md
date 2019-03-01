@@ -29,7 +29,7 @@ This generates the training data in the ./samples directory, which can be visual
 
 + *python plot_EZ_stats.py ./inputs/training.json*
 
-Likewise, the main results of Section 4 can be reproduced with:
+The ./samples directory contains precomputed training data. The main results of Section 4, i.e. those of the data-driven surrogate, can be reproduced with:
 
 + *python tau_ez_ocean.py ./inputs/T2.json*
 + *python plot_EZ_stats.py ./inputs/T2.json*
