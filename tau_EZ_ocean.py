@@ -656,8 +656,7 @@ for n in range(n_steps):
 if state_store == True:
     
     keys = ['t', 'w_hat_nm1_HF', 'w_hat_n_HF', 'VgradW_hat_nm1_HF', \
-            'w_hat_nm1_LF', 'w_hat_n_LF', 'VgradW_hat_nm1_LF', \
-            'w_hat_nm1_UP', 'w_hat_n_UP', 'VgradW_hat_nm1_UP']
+            'w_hat_nm1_LF', 'w_hat_n_LF', 'VgradW_hat_nm1_LF']
     
     state = {}
     
