@@ -103,7 +103,34 @@ def draw_stats():
     plt.plot(T, enstrophy_LF, label=r'$Z^{LF}$')
     plt.plot(T, enstrophy_UP, label=r'$Z^{UP}$')
     plt.legend(loc=0)
-    plt.tight_layout()
+    #plt.tight_layout()
+    
+def movie(s):
+    plt.clf()
+    plt.subplot(121, xlabel=r't [days]', title=r'energy E')
+    plt.plot(samples['t'][0:s]/day, samples['e_n_LF'][0:s], 'ro', alpha=0.4, label=r'$\mathrm{reduced}$')
+    plt.plot(samples['t'][0:s]/day, samples['e_n_HF'][0:s], 'b', linewidth=2, label=r'$\mathrm{reference}$')
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    plt.legend(loc=2)
+
+#    #plt.plot(samples['t'][0:s]/day, samples['z_n_UP'][0:s], label=r'$Z^{UP}$')
+#    plt.subplot(132, xlabel=r't [days]', title=r'enstrophy Z')
+#    plt.plot(samples['t'][0:s]/day, samples['z_n_LF'][0:s], 'ro', alpha=0.4, label=r'$\mathrm{reduced}$')
+#    plt.plot(samples['t'][0:s]/day, samples['z_n_HF'][0:s], 'b', linewidth=2, label=r'$\mathrm{reference}$')
+#    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+#    plt.legend(loc=2)
+    #
+    plt.subplot(122, xlabel='x', ylabel='y', title=r'$\tau_E \omega$')
+    EF = np.fft.irfft2(samples['EF_hat'][s,:,:])
+    EF_a = np.min(EF); EF_b = np.max(EF)
+    plt.contourf(x, y, 2*(EF - EF_a)/(EF_b - EF_a) - 1.0, np.linspace(-1, 1, 100))
+
+#    plt.subplot(133, xlabel='x', ylabel='y', title=r'reference eddy forcing')
+#    EF_exact = np.fft.irfft2(samples['EF_hat_exact'][s,:,:])
+#    EF_a = np.min(EF_exact); EF_b = np.max(EF_exact)
+#    plt.contourf(x, y, 2*(EF_exact - EF_a)/(EF_b - EF_a) - 1.0, np.linspace(-1, 1, 100))
+
+    plt.tight_layout()    
 
 #return the fourier coefs of the stream function
 def get_psi_hat(w_hat_n):
@@ -116,6 +143,18 @@ def get_psi_hat(w_hat_n):
 ###############################
 # DATA-DRIVEN TAU SUBROUTINES #
 ###############################
+    
+def get_data_driven_tau_src_E(w_hat_n_LF, w_hat_n_HF, P, tau_max_E):
+    
+    E_LF, Z_LF, S_LF = get_EZS(w_hat_n_LF)
+
+    E_HF = compute_E(P*w_hat_n_HF)
+
+    dE = (E_HF - E_LF)#/E_LF
+
+    tau_E = tau_max_E*np.tanh(dE/E_LF)
+    
+    return tau_E, dE
 
 def get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P, tau_max_E, tau_max_Z):
     
@@ -241,6 +280,7 @@ from scipy.integrate import simps
 from itertools import combinations, chain
 import sys
 import json
+import matplotlib.animation as animation
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
@@ -297,7 +337,7 @@ mu = 1.0/(day*decay_time_mu)
 #start, end time, end time of data (training period), time step
 t = 250.0*day
 t_end = t + 8.0*365*day
-t_end = t + 8.0*365*day
+t_end = 350.0*day
 t_data = t + 8.0*365.0*day 
 dt = 0.01
 n_steps = np.ceil((t_end-t)/dt).astype('int')
@@ -309,7 +349,8 @@ n_steps = np.ceil((t_end-t)/dt).astype('int')
 #simulation name
 sim_ID = 'tau_EZ_PE_HF'
 #framerate of storing data, plotting results, computing correlations
-store_frame_rate = 1
+#store_frame_rate = 1
+store_frame_rate = np.floor(0.25*day/dt).astype('int')
 plot_frame_rate = np.floor(0.25*day/dt).astype('int')
 corr_frame_rate = np.floor(0.25*day/dt).astype('int')
 #length of data array
@@ -324,10 +365,11 @@ state_store = False     #store the state at the end
 restart = True          #restart from prev state
 store = True            #store data
 store_fig = False       #store figure object
-plot = False            #plot results while running, requires drawnow package
+plot = False             #plot results while running, requires drawnow package
 corr = False            #compute and store correlations
+make_movie = True
 
-eddy_forcing_type = 'binned'    #which eddy forcing to use
+eddy_forcing_type = 'tau_ortho'    #which eddy forcing to use
 
 if sim_ID == 'tau_EZ' or sim_ID == 'tau_EZ_PE_HF':
     print 'Using HF nu_LF'
@@ -352,7 +394,8 @@ store_ID = sim_ID + '_' + sim_number
 QoI = ['z_n_HF', 'e_n_HF', 'z_n_UP', 'e_n_UP', \
        'z_n_LF', 'e_n_LF', 'u_n_LF', 's_n_LF', 'v_n_LF', 'o_n_LF', \
        'sprime_n_LF', 'zprime_n_LF', \
-       'tau_E', 'tau_Z', 'r_tau_E', 'r_tau_Z', 't']
+       'tau_E', 'tau_Z', 'r_tau_E', 'r_tau_Z', 't', \
+       'EF_hat', 'EF_hat_exact']
 Q = len(QoI)
 
 #allocate memory
@@ -547,6 +590,9 @@ T  = []; R_DE = []; R_DZ = []; Tau_E = []; DE = []; Tau_Z = []; DZ = []; R_tau_E
 energy_HF = []; energy_LF = []; energy_UP = []
 enstrophy_HF = []; enstrophy_LF = []; enstrophy_UP = []
 
+if make_movie == True:
+    fig = plt.figure(figsize=[6.7, 4])
+
 #time loop
 for n in range(n_steps):
     
@@ -562,9 +608,10 @@ for n in range(n_steps):
 
     #exact tau_E and tau_Z
     tau_E, tau_Z, dE, dZ = get_data_driven_tau_src_EZ(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max, tau_Z_max)
+    tau_E, dE = get_data_driven_tau_src_E(w_hat_n_LF, w_hat_n_HF, P_LF, tau_E_max)
     
     #E & Z tracking eddy forcing
-    EF_hat_n_ortho = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
+    #EF_hat_n_ortho = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime 
 
     ##############
     # covariates #
@@ -624,7 +671,8 @@ for n in range(n_steps):
         EF_hat =  -r_tau_E*psi_hat_n_prime - r_tau_Z*w_hat_n_prime 
 
     elif eddy_forcing_type == 'tau_ortho':
-        EF_hat = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime
+        #EF_hat = -tau_E*psi_hat_n_prime - tau_Z*w_hat_n_prime
+        EF_hat = -tau_E*w_hat_n_LF
     elif eddy_forcing_type == 'unparam':
         EF_hat = np.zeros([N, N/2+1])
     elif eddy_forcing_type == 'exact':
@@ -670,17 +718,17 @@ for n in range(n_steps):
         print corr_coef(dPsi_n, psi_n_LF)
 
         print 'tau_E =', tau_E
-        print 'tau_Z =', tau_Z
-        E_HF, Z_HF, _ = compute_EZS(P_LF*w_hat_np1_HF)
-        E_LF, Z_LF, _ = compute_EZS(w_hat_np1_LF)
-        E_UP, Z_UP, _ = compute_EZS(w_hat_np1_UP)
+        #print 'tau_Z =', tau_Z
+        E_HF, Z_HF, _ = get_EZS(P_LF*w_hat_np1_HF)
+        E_LF, Z_LF, _ = get_EZS(w_hat_np1_LF)
+        E_UP, Z_UP, _ = get_EZS(w_hat_np1_UP)
     
         energy_HF.append(E_HF); enstrophy_HF.append(Z_HF)
         energy_LF.append(E_LF); enstrophy_LF.append(Z_LF)
         energy_UP.append(E_UP); enstrophy_UP.append(Z_UP)
 
-        #drawnow(draw_stats)
-        drawnow(draw_2w)
+        drawnow(draw_stats)
+        #drawnow(draw_2w)
         
     #store samples to dict
     if j2 == store_frame_rate and store == True:
@@ -710,9 +758,12 @@ for n in range(n_steps):
         samples['zprime_n_LF'][idx] = zprime_n_LF
         samples['tau_E'][idx] = tau_E
         samples['tau_Z'][idx] = tau_Z
-        samples['r_tau_E'][idx] = r_tau_E
-        samples['r_tau_Z'][idx] = r_tau_Z
+        #samples['r_tau_E'][idx] = r_tau_E
+        #samples['r_tau_Z'][idx] = r_tau_Z
         samples['t'][idx] = t
+        
+        samples['EF_hat'][idx,:,:] = EF_hat
+        samples['EF_hat_exact'][idx,:,:] = EF_hat_nm1_exact
         
         idx += 1  
 
@@ -815,5 +866,10 @@ if corr == True:
     leg.draggable(True)
 
 ####################################
+    
+if make_movie == True:
+    ani = animation.FuncAnimation(fig, movie, frames=np.arange(S))
+    writer = animation.writers['ffmpeg'](fps=8)
+    ani.save('./demo.mp4',writer=writer,dpi=100)
 
 plt.show()
