@@ -64,3 +64,4 @@ for i in range(len(target)):
     fp.write('\n')
 
     print json_in
+fp.close()
