@@ -52,10 +52,10 @@ def get_w_hat_np1(w_hat_n, w_hat_nm1, VgradW_hat_nm1, P, norm_factor, sgs_hat = 
 #compute spectral filter
 def get_P(cutoff):
     
-    P = np.ones([N, N/2+1])
+    P = np.ones([N, int(N/2+1)])
     
     for i in range(N):
-        for j in range(N/2+1):
+        for j in range(int(N/2+1)):
             
             if np.abs(kx[i, j]) > cutoff or np.abs(ky[i, j]) > cutoff:
                 P[i, j] = 0.0
@@ -67,7 +67,7 @@ def store_samples_hdf5():
   
     fname = HOME + '/samples/' + store_ID + '_t_' + str(np.around(t_end/day, 1)) + '.hdf5'
     
-    print 'Storing samples in ', fname
+    print('Storing samples in ', fname)
     
     if os.path.exists(HOME + '/samples') == False:
         os.makedirs(HOME + '/samples')
@@ -81,12 +81,16 @@ def store_samples_hdf5():
         
     h5f.close()    
 
-def draw_2w():
-    plt.subplot(121)
-    plt.contourf(x, y, w_np1_LF, 100)
-    plt.subplot(122)
-    plt.contourf(x, y, EF, 100)
+def draw():
+    fig_plot.clf()
+    ax1 = fig_plot.add_subplot(121)
+    ax1.contourf(x, y, w_np1_LF, 100)
+    ax2 = fig_plot.add_subplot(122)
+    ax2.plot(Q_LF['E'])
+    if compute_ref:
+        ax2.plot(Q_HF['E'], 'o')       
     plt.tight_layout()
+    plt.pause(0.1)
 
 #return the fourier coefs of the stream function
 def get_psi_hat(w_hat_n):
@@ -216,21 +220,17 @@ def corr_coef(X, Y):
 
 import numpy as np
 import matplotlib.pyplot as plt
-import os, cPickle
+import os, pickle
 import h5py
 from scipy.integrate import simps
 from itertools import combinations, chain
 import sys
 import json
-#from drawnow import drawnow
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
 
 HOME = os.path.abspath(os.path.dirname(__file__))
-
-plt.close('all')
-plt.rcParams['image.cmap'] = 'seismic'
 
 #number of gridpoints in 1D
 I = 7
@@ -245,11 +245,11 @@ axis = np.linspace(0, 2.0*np.pi, N)
 #frequencies
 k = np.fft.fftfreq(N)*N
 
-kx = np.zeros([N, N/2+1]) + 0.0j
-ky = np.zeros([N, N/2+1]) + 0.0j
+kx = np.zeros([N, int(N/2+1)]) + 0.0j
+ky = np.zeros([N, int(N/2+1)]) + 0.0j
 
 for i in range(N):
-    for j in range(N/2+1):
+    for j in range(int(N/2+1)):
         kx[i, j] = 1j*k[j]
         ky[i, j] = 1j*k[i]
 
@@ -308,21 +308,21 @@ N_surr = int(fp.readline())
 inputs = []
 
 flags = json.loads(fp.readline())
-print '*********************'
-print 'Simulation flags'
-print '*********************'
+print('*********************')
+print('Simulation flags')
+print('*********************')
 
 for key in flags.keys():
     vars()[key] = flags[key]
-    print key, '=', flags[key]    
+    print(key, '=', flags[key])    
 
-print '*********************'
+print('*********************')
 
 #Manual specification of flags 
 #state_store = False     #store the state at the end
 #restart = True          #restart from prev state
 #store = True            #store data
-#plot = False            #plot results while running, requires drawnow package
+#plot = False            #plot results while running
 #compute_ref = True      #compute the reference solution as well, keep at True, will automatically turn off in surrogate mode
 #
 #eddy_forcing_type = 'binned'    #which eddy forcing to use (binned, tau_ortho, exact, unparam)
@@ -369,14 +369,13 @@ F_hat = np.fft.rfft2(F);
 
 if restart == True:
 
-    print 'Restarting from t =', str(np.around(t/day, 1))
+    print('Restarting from t =', str(np.around(t/day, 1)))
         
-    state = cPickle.load(open(HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t/day, 1)) + '.pickle'))
+    state = pickle.load(open(HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t/day, 1)) + '.pickle', 'rb'), encoding='latin1')
     for key in state.keys():
-        print key
+        print(key)
         vars()[key] = state[key]
-
-    print '*********************'
+    print('*********************')
 
 else:
     
@@ -411,9 +410,9 @@ if eddy_forcing_type == 'binned':
     for i in range(N_surr):
         inputs.append(json.loads(fp.readline()))
         
-    print '****************************'
-    print 'Creating', N_surr, ' surrogates'
-    print '****************************'
+    print('****************************')
+    print('Creating', N_surr, ' surrogates')
+    print('****************************')
 
     ###########################
     # load the reference data #
@@ -421,11 +420,11 @@ if eddy_forcing_type == 'binned':
     #fname = HOME + '/samples/' + sim_ID + '_exact_training_t_' + str(np.around(t_data/day, 1)) + '.hdf5'
     fname = HOME + '/samples/' + inputs[0]['training_data']  + '.hdf5'
 
-    print 'Loading', fname
+    print('Loading', fname)
 
     h5f = h5py.File(fname, 'r')
 
-    print h5f.keys()
+    print(h5f.keys())
 
     #########################
     # create the surrogates #
@@ -457,15 +456,15 @@ if eddy_forcing_type == 'binned':
         min_lag = np.min(lags[target])
         j3[target] = 0#min_lag*store_frame_rate
         
-        print '***********************'
-        print 'Parameters'
-        print '***********************'
-        print 'Input file =', input_file 
-        print 'Target =', target
-        print 'Covariates =', covariates[target]
-        print 'Excluding', S_extrap, ' points from training set' 
-        print 'Lags =', lags[target]
-        print '***********************'
+        print('***********************')
+        print('Parameters')
+        print('***********************')
+        print('Input file =', input_file) 
+        print('Target =', target)
+        print('Covariates =', covariates[target])
+        print('Excluding', S_extrap, ' points from training set')
+        print('Lags =', lags[target])
+        print('***********************')
 
         #covariates
         c_i = np.zeros([S_train - max_lag, N_c[target]])
@@ -503,10 +502,10 @@ if eddy_forcing_type == 'binned':
         N_bins = 10
 
         #create a surrogate model object
-        print 'Creating Binning object...'
+        print('Creating Binning object...')
         from binning import *
         surrogate[target] = Binning(c_i, r.flatten(), 1, N_bins, lags = lags[target], verbose=False)
-        print 'done'
+        print('done')
 
         surrogate[target].print_bin_info()
 
@@ -516,6 +515,11 @@ norm_factor_LF = 1.0/(3.0/(2.0*dt) - nu_LF*k_squared + mu)  #for Low-Fidelity (L
 
 #some counters
 j = 0; j2 = 0; idx = 0;
+
+if plot:
+    fig_plot = plt.figure(figsize=[8,4])
+    Q_HF = {'E': [], 'Z': []}
+    Q_LF = {'E': [], 'Z': []}
 
 #time loop
 for n in range(n_steps):
@@ -566,7 +570,7 @@ for n in range(n_steps):
             #cannot resample until the maximum employed time lag has passed, before that use reference solution 
             if n >= np.max(lags[target])*store_frame_rate:
                
-                compute_ref = False
+                # compute_ref = False
 
                 if j3[target] >= np.min(lags[target])*store_frame_rate:
                     j3[target] = 0
@@ -608,7 +612,7 @@ for n in range(n_steps):
     elif eddy_forcing_type == 'exact':
         EF_hat = EF_hat_nm1_exact
     else:
-        print 'No valid eddy_forcing_type selected'
+        print('No valid eddy_forcing_type selected')
         import sys; sys.exit()
    
     #########################
@@ -619,21 +623,28 @@ for n in range(n_steps):
     j += 1
     j2 += 1
    
-    #plot solution every plot_frame_rate. Requires drawnow() package
+    #plot solution every plot_frame_rate.
     if j == plot_frame_rate and plot == True:
         j = 0
+        
+        Q_LF['E'].append(e_n_LF)
+        Q_LF['Z'].append(z_n_LF)
 
         w_np1_LF = np.fft.irfft2(w_hat_np1_LF)
-        EF = np.fft.irfft2(EF_hat)
+        # EF = np.fft.irfft2(EF_hat)
+        if compute_ref:
+            e_n_HF, z_n_HF, _ = get_EZS(P_LF * w_hat_n_HF)
+            Q_HF['E'].append(e_n_HF)
+            Q_HF['Z'].append(z_n_HF)
 
-        drawnow(draw_2w)
+        draw()
         
     #store samples to dict
     if j2 == store_frame_rate and store == True:
         j2 = 0
         
         if np.mod(n, np.round(day/dt)) == 0:
-            print 'n = ', n, ' of ', n_steps
+            print('n = ', n, ' of ', n_steps)
 
         for qoi in QoI:
             samples[qoi][idx] = eval(qoi)
@@ -666,7 +677,7 @@ if state_store == True:
     if os.path.exists(HOME + '/restart') == False:
         os.makedirs(HOME + '/restart')
     
-    cPickle.dump(state, open(HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t_end/day,1)) + '.pickle', 'w'))
+    pickle.dump(state, open(HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t_end/day,1)) + '.pickle', 'wb'))
 
 ####################################
 

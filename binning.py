@@ -114,9 +114,9 @@ class Binning:
         self.idx_of_bin = idx_of_bin
         self.unique_binnumbers = unique_binnumbers
         
-        print 'Connecting all possible empty bins to nearest non-empty bin...'
+        print('Connecting all possible empty bins to nearest non-empty bin...')
         self.fill_in_blanks()
-        print 'done.'
+        print('done.')
 
         #mean r per cell
         self.rmean, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='mean', bins=bins)
@@ -137,7 +137,7 @@ class Binning:
             N_outliers = outliers_idx.size
             
             if self.verbose == True:
-                print N_outlier_bins, ' bins with', N_outliers ,'outlier samples found'
+                print(N_outlier_bins, ' bins with', N_outliers ,'outlier samples found')
         
             #x location of outliers
             x_outliers = np.copy(c_i[outliers_idx])
@@ -161,7 +161,7 @@ class Binning:
             binnumbers_closest = self.binnumbers_nonempty[closest_idx]
 
             if self.verbose == True:
-                print 'Moving', binnumbers_i[outliers_idx], '-->', binnumbers_closest
+                print('Moving', binnumbers_i[outliers_idx], '-->', binnumbers_closest)
 
             binnumbers_i[outliers_idx] = binnumbers_closest
             
@@ -207,7 +207,7 @@ class Binning:
     def plot_2D_binning_object(self):
 
         if self.N_c != 2:
-            print 'Only works for N_c = 2'
+            print('Only works for N_c = 2')
             return
 
         fig = plt.figure()
@@ -248,7 +248,8 @@ class Binning:
         #convert 1D binnumbers_i to equivalent ND indices
         x_idx = np.unravel_index(binnumbers_i, [len(b) + 1 for b in self.bins])
         x_idx = [x_idx[i] - 1 for i in range(self.N_c)]
-        
+        x_idx = tuple(x_idx)
+     
         #random integers between 0 and max bin count for each index in binnumbers_i    
         I = np.floor(self.count[x_idx].reshape([self.N**2, 1])*np.random.rand(self.N**2, n_mc)).astype('int')
         
@@ -305,18 +306,18 @@ class Binning:
             if lags[i] <= self.max_lag:
                 c_i[:, i] = self.covar[i][-lags[i]]
             else:
-                print 'Warning, max lag exceeded'
+                print('Warning, max lag exceeded')
                 import sys; sys.exit()
             
         return c_i       
            
     def print_bin_info(self):
-        print '-------------------------------'
-        print 'Total number of samples= ', self.r_ip1.size
-        print 'Total number of bins = ', self.N_bins**self.N_c
-        print 'Total number of non-empty bins = ', self.binnumbers_nonempty.size
-        print 'Percentage filled = ', np.double(self.binnumbers_nonempty.size)/self.N_bins**self.N_c*100., ' %'
-        print '-------------------------------'
+        print('-------------------------------')
+        print('Total number of samples= ', self.r_ip1.size)
+        print('Total number of bins = ', self.N_bins**self.N_c)
+        print('Total number of non-empty bins = ', self.binnumbers_nonempty.size)
+        print('Percentage filled = ', np.double(self.binnumbers_nonempty.size)/self.N_bins**self.N_c*100., ' %')
+        print('-------------------------------')
         
     #compute the uniform bins of the conditional variables in c
     def get_bins(self, N_bins):
